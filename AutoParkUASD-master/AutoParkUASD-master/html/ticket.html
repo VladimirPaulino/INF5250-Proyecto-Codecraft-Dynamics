@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AutoPark - Historial de Tickets</title>
+    <link rel="stylesheet" href="../css/ticket.css" />
+    <link rel="stylesheet" href="../css/entrada.css" />
+    <link rel="icon" type="image/png" href="../img/logo2.png" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+</head>
+
+<body>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="logo">
+                <img src="../img/logo2.png" alt="AutoPark" />
+                <span>Sistema de parqueo</span>
+            </div>
+            <nav>
+                <a href="/dashboard"><i class="fas fa-home"></i> Inicio</a>
+                <a class="active" href="/entrada"><i class="fas fa-car" onclick="admin()"></i> Registrar Entrada</a>
+                <a href="/salida"><i class="fas fa-sign-out-alt"></i> Registrar Salida</a>
+                <a href="/reportes" class="nav-auth-only"><i class="fas fa-chart-bar"></i> Reportes</a>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <div class="topbar">
+                <h2>Registro Tickets</h2>
+                <div class="user">
+                    <i class="fas fa-cog"></i>
+                    <img src="https://i.pravatar.cc/40" />
+                </div>
+            </div>
+            <div class="container">
+                <h2>🔍 Historial y Búsqueda de Tickets</h2>
+
+                <!-- Buscador -->
+                <div class="search-section">
+                    <div class="form-group">
+                        <label>Buscar por ID o Vehículo</label>
+                        <input type="text" id="inputBusqueda" placeholder="Escriba ID del ticket o vehículo..."
+                            onkeyup="filtrarTickets()">
+                    </div>
+                    <button class="btn-print" onclick="window.print()">🖨️ Imprimir Reporte</button>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ticket ID</th>
+                            <th>Vehículo ID</th>
+                            <th>Entrada</th>
+                            <th>Salida</th>
+                            <th>Monto</th>
+                            <th class="btn-accion">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaTickets">
+                        <!-- Cargado por JS -->
+                    </tbody>
+                </table>
+                <br>
+                <a href="/dashboard" class="back-link" style="color: #007bff; text-decoration: none;">← Volver al
+                    Inicio</a>
+            </div>
+
+            <script>
+                let ticketsCargados = []; // Variable global para guardar los datos
+
+                if (!localStorage.getItem("rol")) {
+                    document.querySelectorAll(".nav-auth-only").forEach((el) => {
+                        el.style.display = "none";
+                    });
+                }
+
+                // 1. Obtener todos los tickets al iniciar
+                async function cargarTickets() {
+                    try {
+                        const res = await fetch('/api/tickets');
+                        const result = await res.json();
+                        ticketsCargados = result.data; // Guardamos copia para filtrar
+                        mostrarEnTabla(ticketsCargados);
+                    } catch (err) {
+                        console.error("Error cargando tickets:", err);
+                    }
+                }
+
+                // 2. Función para dibujar las filas en la tabla
+                function mostrarEnTabla(lista) {
+                    const tbody = document.getElementById('tablaTickets');
+                    tbody.innerHTML = '';
+
+                    lista.forEach(t => {
+                        tbody.innerHTML += `
+                <tr>
+                    <td><b>#${t.id}</b></td>
+                    <td>${t.vehiculo_id}</td>
+                    <td>${new Date(t.fecha_hora_entrada).toLocaleString()}</td>
+                    <td>${t.fecha_hora_salida ? new Date(t.fecha_hora_salida).toLocaleString() : '<span style="color:orange">En Parqueo</span>'}</td>
+                    <td>RD$ ${t.total_pagar || 0}</td>
+                    <td class="btn-accion">
+                        <button onclick='imprimirTicket(${JSON.stringify(t)})'>🎫 Ticket</button>
+                    </td>
+                </tr>
+            `;
+                    });
+                }
+
+                // 3. Lógica del Buscador (Filtra sin recargar página)
+                function filtrarTickets() {
+                    const busqueda = document.getElementById('inputBusqueda').value.toLowerCase();
+
+                    const filtrados = ticketsCargados.filter(t => {
+                        return t.id.toString().includes(busqueda) ||
+                            t.vehiculo_id.toString().includes(busqueda);
+                    });
+
+                    mostrarEnTabla(filtrados);
+                }
+
+                // 4. Función de Impresión Individual
+                function imprimirTicket(t) {
+                    const ventana = window.open('', '_blank', 'width=300,height=400');
+                    ventana.document.write(`
+            <body style="font-family:monospace; text-align:center;">
+                <h3>AUTOPARK UASD</h3>
+                <p>Ticket: #${t.id}</p>
+                <p>Vehículo: ${t.vehiculo_id}</p>
+                <p>Entrada: ${new Date(t.fecha_hora_entrada).toLocaleString()}</p>
+                ${t.fecha_hora_salida ? `<p>Salida: ${new Date(t.fecha_hora_salida).toLocaleString()}</p>` : ''}
+                <hr>
+                <p>Total: RD$ ${t.total_pagar || 0}</p>
+                <script>window.print(); window.close();<\/script>
+            </body>
+        `);
+                    ventana.document.close();
+                }
+
+                // Cargar al iniciar
+                cargarTickets();
+            </script>
+
+</body>
+
+</html>
