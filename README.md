@@ -1,6 +1,6 @@
 \*\*INF-5250 Ingenieria de Software II
 
-Integrantes del grupo:\*\* Vladimir Paulino Alvarez, Rodwel Polanco Martinez, Jeyson Israel Montero Mateo.
+Integrantes del grupo:\*\* Vladimir Paulino Alvarez, Rodwel Polanco Martinez, Jeyson Israel Montero Mateo y Frady Josue Nova Vargas.
 
 **Nombre y descripcion breve del sistema (MVP Inicial):**
 
