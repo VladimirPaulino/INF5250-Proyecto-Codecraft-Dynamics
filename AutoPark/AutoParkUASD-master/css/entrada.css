@@ -1,0 +1,384 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+body {
+    background: #eef2f7;
+}
+
+.layout {
+    display: flex;
+    min-height: 100vh;
+    /* ocupa toda la altura */
+}
+
+/* SIDEBAR */
+.sidebar {
+    width: 260px;
+    height: 100vh;
+    background: linear-gradient(180deg, #2c4a72, #1e3c72);
+    padding: 25px 15px;
+}
+
+.sidebar nav {
+    margin-top: 30px;
+}
+
+.sidebar nav a {
+    display: block;
+    color: #ccc;
+    text-decoration: none;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.sidebar nav a.active,
+.sidebar nav a:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+/* MAIN */
+.main {
+    flex: 1;
+    padding: 20px 25px;
+    margin: 0;
+}
+
+/* TOPBAR */
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 60px;
+    /* esto centra TODO verticalmente */
+    margin-bottom: 10px;
+    /*reduce espacio */
+}
+
+.topbar h2 {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.user i {
+    font-size: 18px;
+    color: #6b7280;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.user i:hover {
+    color: #4facfe;
+}
+
+.user img {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+}
+
+/*imagenes logo*/
+.logo img {
+    width: 190px;
+    height: auto;
+    filter: drop-shadow(0px 4px 10px rgba(0, 0, 0, 0.4)) brightness(1.1);
+}
+
+.logo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /*centra horizontal */
+    justify-content: center;
+    text-align: center;
+    margin-top: 50px;
+    margin-bottom: 30px;
+}
+
+.logo h2 {
+    margin: 0;
+    color: #00f2fe;
+}
+
+.logo span {
+    font-size: 20px;
+    color: rgb(255, 255, 255);
+    margin-top: 5px;
+}
+
+.logo p {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.7);
+    margin-top: 8px;
+    letter-spacing: 1px;
+}
+
+.logo img:hover {
+    transform: scale(1.05);
+    transition: 0.3s;
+}
+
+/* CONTENT */
+.content {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 20px;
+    /* más compacto */
+    margin-top: 10px;
+}
+
+/* CARDS */
+.card {
+    background: white;
+    padding: 25px;
+    border-radius: 18px;
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.06);
+}
+
+.card:hover {
+    transform: translateY(-3px);
+    transition: 0.3s;
+}
+
+/* FORM */
+.form input,
+.form select {
+    width: 100%;
+    padding: 14px;
+    margin-top: 12px;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    background: #f9fafb;
+    font-size: 14px;
+}
+
+.form input:focus,
+.form select:focus {
+    border-color: #4facfe;
+    background: white;
+}
+
+.switch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 18px 0;
+    font-size: 14px;
+}
+
+/* BUTTON */
+.btn-primary {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, #4facfe, #00f2fe);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.3s;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* TABLE */
+.table {
+    padding: 20px;
+}
+
+.table table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.table th {
+    text-align: left;
+    font-size: 13px;
+    color: #9ca3af;
+    padding-bottom: 10px;
+}
+
+.table td {
+    padding: 12px 0;
+    border-bottom: 1px solid #f1f1f1;
+}
+
+.table tr:hover {
+    background: #f9fafb;
+}
+
+/* BADGES */
+.badge {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.green {
+    background: linear-gradient(135deg, #43e97b, #38f9d7);
+    color: white;
+}
+
+.blue {
+    background: linear-gradient(135deg, #4facfe, #00f2fe);
+    color: white;
+}
+
+.yellow {
+    background: #facc15;
+    color: #333;
+}
+
+/*togles de tick*/
+/* TOGGLE SWITCH */
+/* TOGGLE SWITCH MODERNO */
+.toggle {
+    position: relative;
+    width: 52px;
+    height: 26px;
+}
+
+.toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    background: #e5e7eb;
+    border-radius: 50px;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    transition: 0.4s;
+}
+
+/* círculo */
+.slider::before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    top: 3px;
+    background: white;
+    border-radius: 50%;
+    transition: 0.4s;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.slider::after {
+    content: "📷";
+    position: absolute;
+    right: 6px;
+    top: 3px;
+    font-size: 12px;
+    opacity: 0.6;
+}
+
+/* ACTIVADO */
+.toggle input:checked+.slider {
+    background: linear-gradient(135deg, #4facfe, #00f2fe);
+}
+
+.toggle input:checked+.slider::before {
+    transform: translateX(26px);
+}
+
+/*filtro*/
+.filters {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.filters input,
+.filters select {
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+/* =========================
+   📱 MODO CELULAR
+   ========================= */
+@media (max-width: 768px) {
+
+    /* CONTENEDOR */
+    .login-container {
+        padding: 20px;
+    }
+
+    /* CAJA LOGIN */
+    .login-box {
+        width: 100%;
+        max-width: 100%;
+        padding: 25px;
+        border-radius: 15px;
+    }
+
+    /* LOGO */
+    .logo img {
+        max-width: 180px;
+    }
+
+    .logo span {
+        font-size: 18px;
+    }
+
+    /* INPUTS */
+    .input {
+        padding: 12px;
+    }
+
+    .input input {
+        font-size: 14px;
+    }
+
+    /* BOTÓN */
+    button {
+        padding: 14px;
+        font-size: 14px;
+    }
+
+}
+
+@media (max-width: 480px) {
+
+    .login-box {
+        padding: 20px;
+    }
+
+    .logo img {
+        max-width: 150px;
+    }
+
+    .logo span {
+        font-size: 16px;
+    }
+
+}

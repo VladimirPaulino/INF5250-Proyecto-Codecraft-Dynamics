@@ -1,0 +1,19 @@
+     body { font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; padding: 20px; }
+        .container { max-width: 1100px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        
+        /* Sección de Búsqueda */
+        .search-section { background: #e3f2fd; padding: 20px; border-radius: 8px; display: flex; gap: 15px; align-items: flex-end; margin-bottom: 30px; }
+        .form-group { display: flex; flex-direction: column; gap: 5px; flex: 1; }
+        input { padding: 10px; border: 1px solid #90caf9; border-radius: 5px; }
+        .btn-print { background: #333; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+
+        /* Tabla */
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; border: 1px solid #eee; text-align: center; }
+        th { background: #007bff; color: white; }
+        tr:hover { background-color: #f1f8ff; }
+
+        @media print {
+            .search-section, .btn-accion, .back-link { display: none !important; }
+            .container { box-shadow: none; width: 100%; }
+        }
