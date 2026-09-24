@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autopark - Inicio</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        .search-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .search-bar input {
+            flex: 1;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+        }
+
+        .search-bar button {
+            padding: 10px 20px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            min-width: 400px;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .modal-content h3 {
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+
+        .modal-content p {
+            margin-bottom: 10px;
+            font-size: 15px;
+        }
+
+        .modal-content .total {
+            font-size: 22px;
+            color: #2ecc71;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+
+        .modal-actions {
+            margin-top: 20px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        tr.clickable {
+            cursor: pointer;
+        }
+
+        tr.clickable:hover {
+            background: #f0f4ff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="logo">
+                <img src="../img/logo2.png" alt="AutoPark">
+                <span>Sistema de parqueo</span>
+            </div>
+            <nav class="menu">
+                <a href="/dashboard" class="active"><i class="fa fa-home"></i> Inicio</a>
+                <a href="/entrada"><i class="fa fa-sign-in-alt"></i> Registrar Entrada</a>
+                <a href="/salida"><i class="fa fa-sign-out-alt"></i> Registrar Salida</a>
+                <a href="/reservacion"><i class="fa fa-sign-out-alt"></i> Gestion de Reservacion </a>
+                <a href="/vehiculo" class="nav-auth-only"><i class="fa fa-file-alt"></i> Reporte Vehicular</a>
+                <a href="/tickets" class="nav-auth-only"><i class="fas fa-sign-out-alt"></i> Historial Tickets</a>
+                <a href="/admin" class="nav-auth-only"><i class="fa fa-users"></i> Gestión Usuarios</a>
+                <a href="/reportes" class="nav-auth-only"><i class="fa fa-file-alt"></i> Reportes</a>
+
+                <div id="adminSection"
+                    style="display: none; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 10px; padding-top: 10px;">
+                </div>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <header class="header">
+                <h2><i class="fa fa-home"></i> Dashboard Principal</h2>
+                <div class="user">
+                    <span id="userName" style="font-weight: bold; margin-right: 10px;"></span>
+                    <button onclick="logout()"
+                        style="background:none; border:none; color:red; cursor:pointer;">Salir</button>
+                </div>
+            </header>
+
+            <div class="content">
+                <section class="cards">
+                    <div class="card blue" id="cardVehiculosActivos">
+                        <i class="fa fa-car"></i>
+                        <h3>Vehículos Activos</h3>
+                        <p id="countActivos">0</p>
+                    </div>
+                    <div class="card green" id="cardIngresosTotales">
+                        <i class="fa fa-dollar-sign"></i>
+                        <h3>Ingresos Totales</h3>
+                        <p id="totalIngresos">$0.00</p>
+                    </div>
+                    <div class="card orange">
+                        <i class="fa fa-ticket-alt"></i>
+                        <h3>Total Tickets</h3>
+                        <p id="totalTickets">0</p>
+                    </div>
+                </section>
+
+                <section class="table-box">
+                    <h3>Vehículos con Ticket Pendiente</h3>
+
+                    <!-- BUSCADOR POR PLACA -->
+                    <div class="search-bar">
+                        <input type="text" id="inputBusqueda" placeholder="Buscar por placa... Ej: MCX-5585" />
+                        <button class="btn blue" onclick="buscarPorPlaca()"><i class="fa fa-search"></i> Buscar</button>
+                        <button class="btn orange" onclick="limpiarBusqueda()"><i class="fa fa-times"></i>
+                            Limpiar</button>
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Hora Entrada</th>
+                                <th>Placa</th>
+                                <th>Tipo</th>
+                                <th>Estado Pago</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaVehiculos">
+                            <tr>
+                                <td colspan="4">Cargando...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL DETALLE TICKET -->
+    <div class="modal" id="modalDetalle">
+        <div class="modal-content">
+            <h3><i class="fa fa-ticket-alt"></i> Detalle del Ticket</h3>
+            <p><strong>Ticket ID:</strong> <span id="detTicketId"></span></p>
+            <p><strong>Placa:</strong> <span id="detPlaca"></span></p>
+            <p><strong>Tipo:</strong> <span id="detTipo"></span></p>
+            <p><strong>Hora Entrada:</strong> <span id="detEntrada"></span></p>
+            <p><strong>Hora Salida:</strong> <span id="detSalida"></span></p>
+            <p><strong>Estado:</strong> <span id="detEstado"></span></p>
+            <p class="total">Total: $<span id="detTotal"></span></p>
+            <div class="modal-actions">
+                <button class="btn orange" onclick="cerrarDetalle()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let todosLosTickets = [];
+        let todosLosVehiculos = [];
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const rol = localStorage.getItem("rol");
+
+            if (rol === "admin") {
+                document.getElementById("adminSection").style.display = "block";
+                document.getElementById("userName").innerText = "Admin";
+            } else if (rol) {
+                document.getElementById("userName").innerText = "Operador";
+            } else {
+                document.getElementById("userName").innerText = "Invitado";
+                const btnSalir = document.querySelector('button[onclick="logout()"]');
+                if (btnSalir) {
+                    btnSalir.innerText = "Iniciar Sesión";
+                    btnSalir.style.color = "#3498db";
+                    btnSalir.onclick = () => window.location.href = "/login";
+                }
+                document.getElementById("cardVehiculosActivos").style.display = "none";
+                document.getElementById("cardIngresosTotales").style.display = "none";
+                document.querySelectorAll(".nav-auth-only").forEach((el) => {
+                    el.style.display = "none";
+                });
+            }
+
+            cargarDashboard();
+        });
+
+        async function cargarDashboard() {
+            try {
+                const [resTickets, resPagos, resVehiculos] = await Promise.all([
+                    fetch("http://localhost:3000/api/tickets"),
+                    fetch("http://localhost:3000/api/pagos"),
+                    fetch("http://localhost:3000/api/vehiculos")
+                ]);
+
+                const dataTickets = await resTickets.json();
+                const dataPagos = await resPagos.json();
+                const dataVehiculos = await resVehiculos.json();
+
+                if (!dataTickets.success) return;
+
+                todosLosTickets = dataTickets.data;
+                todosLosVehiculos = dataVehiculos.success ? dataVehiculos.data : [];
+
+                const pendientes = todosLosTickets.filter(t => t.status_de_pago === "pendiente");
+
+                document.getElementById("countActivos").innerText = pendientes.length;
+                document.getElementById("totalTickets").innerText = todosLosTickets.length;
+
+                let totalIngresos = 0;
+                if (dataPagos.success) {
+                    totalIngresos = dataPagos.data.reduce((sum, p) => sum + parseFloat(p.monto || 0), 0);
+                }
+                document.getElementById("totalIngresos").innerText = `$${totalIngresos.toFixed(2)}`;
+
+                renderTabla(pendientes);
+
+            } catch (error) {
+                console.error("Error cargando dashboard:", error);
+            }
+        }
+
+        function renderTabla(tickets) {
+            const tbody = document.getElementById("tablaVehiculos");
+
+            if (tickets.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4">No hay vehículos activos</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = tickets.slice().reverse().map(t => {
+                const vehiculo = todosLosVehiculos.find(v => v.id === t.vehiculo_id);
+                const placa = vehiculo ? vehiculo.placa : `ID: ${t.vehiculo_id}`;
+                const tipo = vehiculo ? vehiculo.tipo : "-";
+
+                return `
+                    <tr class="clickable" onclick="verDetalle(${t.id})">
+                        <td>${new Date(t.fecha_hora_entrada).toLocaleString()}</td>
+                        <td><strong>${placa}</strong></td>
+                        <td>${tipo}</td>
+                        <td><span class="badge blue">PENDIENTE</span></td>
+                    </tr>
+                `;
+            }).join("");
+        }
+
+        function buscarPorPlaca() {
+            const busqueda = document.getElementById("inputBusqueda").value.trim().toUpperCase();
+
+            if (!busqueda) {
+                alert("Ingresa una placa para buscar");
+                return;
+            }
+
+            const vehiculo = todosLosVehiculos.find(v => v.placa.toUpperCase() === busqueda);
+
+            if (!vehiculo) {
+                alert("No se encontró ningún vehículo con esa placa");
+                return;
+            }
+
+            const ticketsFiltrados = todosLosTickets.filter(t =>
+                t.vehiculo_id === vehiculo.id && t.status_de_pago === "pendiente"
+            );
+
+            if (ticketsFiltrados.length === 0) {
+                alert("No hay tickets activos para esa placa");
+                return;
+            }
+
+            renderTabla(ticketsFiltrados);
+        }
+
+        function limpiarBusqueda() {
+            document.getElementById("inputBusqueda").value = "";
+            const pendientes = todosLosTickets.filter(t => t.status_de_pago === "pendiente");
+            renderTabla(pendientes);
+        }
+
+        function verDetalle(ticketId) {
+            const ticket = todosLosTickets.find(t => t.id === ticketId);
+            if (!ticket) return;
+
+            const vehiculo = todosLosVehiculos.find(v => v.id === ticket.vehiculo_id);
+
+            document.getElementById("detTicketId").innerText = ticket.id;
+            document.getElementById("detPlaca").innerText = vehiculo ? vehiculo.placa : `ID: ${ticket.vehiculo_id}`;
+            document.getElementById("detTipo").innerText = vehiculo ? vehiculo.tipo : "-";
+            document.getElementById("detEntrada").innerText = new Date(ticket.fecha_hora_entrada).toLocaleString();
+            document.getElementById("detSalida").innerText = ticket.fecha_hora_salida
+                ? new Date(ticket.fecha_hora_salida).toLocaleString()
+                : "Aún en parqueo";
+            document.getElementById("detEstado").innerText = ticket.status_de_pago.toUpperCase();
+            document.getElementById("detTotal").innerText = parseFloat(ticket.total_pagar || 0).toFixed(2);
+
+            document.getElementById("modalDetalle").style.display = "flex";
+        }
+
+        function cerrarDetalle() {
+            document.getElementById("modalDetalle").style.display = "none";
+        }
+
+        function logout() {
+            localStorage.removeItem("rol");
+            localStorage.removeItem("usuario_id");
+            localStorage.removeItem("nombre");
+            window.location.href = "/login";
+        }
+    </script>
+</body>
+
+</html>
