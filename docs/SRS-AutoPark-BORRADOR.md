@@ -5,9 +5,9 @@
 **Institución:** Universidad Autónoma de Santo Domingo (UASD)  
 **Equipo:** CodeCraft Dynamics  
 **Entregable de referencia:** E1, Actividad 2. Este es SRS del proyecto actual. ESTO ES UN BORRADOR.
-**Versión de la base medida:** rama `main`, commit `924172c` (informe E1-A1, 2 de octubre de 2026)  
-**Versión del documento:** 0.2 — Borrador
-**Fecha:** 7 de octubre de 2026
+**Versión de la base medida:** tag `v0.1-E1-A1`, commit `6ff603ef3b49f54715e8cacff27e4e67ccce1b07` (2 de octubre de 2026). Mensaje del tag: «Version congelada para E1-A1».  
+**Versión del documento:** 0.3 — Borrador  
+**Fecha:** 9 de octubre de 2026
 
 **Integrantes**
 
@@ -38,7 +38,7 @@ La guía indica tres usos concretos de esta lista:
 AutoPark es el sistema de parqueos del equipo. Un operador registra la entrada y la salida de vehículos, cobra la estadía y consulta el historial. Un administrador gestiona usuarios y revisa lo recaudado. El MVP también debe permitir reservar un espacio y dejar constancia de la operación del parqueo.
 
 **Nombre del producto:** AutoPark.  
-**Base heredada:** la aplicación medida en el commit `924172c`.  
+**Base heredada:** la aplicación congelada en el tag `v0.1-E1-A1` (`6ff603ef3b49f54715e8cacff27e4e67ccce1b07`).  
 **Trabajo pendiente:** los módulos de la sección 3 marcados como Pendiente, repartidos entre E3 y E4.
 
 **Fuera del MVP, y por tanto fuera del WBS:**
@@ -53,7 +53,7 @@ AutoPark es el sistema de parqueos del equipo. Un operador registra la entrada y
 | Término | Significado |
 |---|---|
 | SRS | Especificación de requisitos de software de este MVP. |
-| Base | Código ya construido y medido en E1-A1. No es trabajo pendiente. |
+| Base | Código congelado en el tag `v0.1-E1-A1`. No es trabajo pendiente. |
 | Módulo pendiente | Funcionalidad de esta SRS que aún no queda operando de punta a punta. |
 | E3 | Incremento funcional 1. Al menos un módulo adicional de esta SRS. |
 | E4 | Incremento funcional 2. El resto de los módulos pendientes, más las pruebas del sistema. |
@@ -65,7 +65,7 @@ AutoPark es el sistema de parqueos del equipo. Un operador registra la entrada y
 
 - Guía del profesor, Entregable I (E1) / Actividad 2. Estimación de costo, esfuerzo y duración. Criterios de entrada: SRS en borrador, módulos pendientes identificados, y claridad de qué va en E3 y qué va en E4.
 - Documento de actividades del curso. E3 Actividad 3: incremento funcional 1, al menos un módulo adicional de la SRS. E4 Actividad 4: el resto de los módulos de la SRS, con pruebas.
-- Informe E1-A1 del equipo, commit `924172c`, 2 de octubre de 2026.
+- Tag `v0.1-E1-A1`, commit `6ff603ef3b49f54715e8cacff27e4e67ccce1b07`, 2 de octubre de 2026. Es la versión congelada de la base medida en E1-A1. El estado de cada módulo de esta SRS se leyó en ese commit.
 - IEEE Std 830-1998, como estructura de esta especificación.
 - README del repositorio: MVP de AutoPark.
 
@@ -110,7 +110,7 @@ Hoy el cobro no es único: Registrar Salida usa RD$ 2.00 por minuto para automó
 
 ## 3. Módulos del MVP y trabajo pendiente
 
-Esta es la lista de requerimientos del MVP. El estado se tomó de la base medida en `924172c`.
+Esta es la lista de requerimientos del MVP. El estado de cada módulo se leyó en el tag `v0.1-E1-A1` (`6ff603ef3b49f54715e8cacff27e4e67ccce1b07`), no en un commit anterior ni en cambios posteriores de dependencias.
 
 - **Implementado:** el flujo ya funciona de punta a punta en esa base. No se descompone en el WBS.
 - **Parcial:** hay pantalla o API, pero la regla de esta SRS no se cumple. El faltante sí entra al WBS, dentro del incremento indicado.
@@ -167,7 +167,7 @@ E4, según el documento de actividades, cierra además con pruebas unitarias y d
 
 ## 4. Requisitos específicos
 
-Cada requisito usa «El sistema deberá». La columna de estado indica si la base `924172c` ya lo cumple.
+Cada requisito usa «El sistema deberá». La columna de estado indica si la base del tag `v0.1-E1-A1` ya lo cumple.
 
 ### 4.1 Autenticación y sesión (M1)
 
@@ -344,4 +344,5 @@ Los ya observables en la base: la entrada rápida pide placa y tipo en una sola 
 | Versión | Fecha | Descripción |
 |---|---|---|
 | 0.1 | 2026-10-07 | Borrador inicial del comportamiento de AutoPark. |
-| 0.2 | 2026-10-07 | Ajuste a la guía de E1-A2: módulos del MVP, estado frente al commit `924172c`, y reparto del trabajo pendiente entre E3 y E4. |
+| 0.2 | 2026-10-07 | Ajuste a la guía de E1-A2: módulos del MVP y reparto del trabajo pendiente entre E3 y E4. |
+| 0.3 | 2026-10-09 | La base medida pasa a ser el tag `v0.1-E1-A1` (`6ff603ef3b49f54715e8cacff27e4e67ccce1b07`). Se retira `924172c` como referencia del estado de los módulos. |
