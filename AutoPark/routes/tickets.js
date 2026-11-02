@@ -11,6 +11,13 @@ module.exports = (db) => {
     listResponse(res, data)
   }))
 
+  // RF-18 y RF-21: entrada que reutiliza la placa y rechaza un segundo ticket abierto
+  router.post('/entrada', handle(async (req, res) => {
+    const { placa, tipo, usuario_id, fecha_hora_entrada } = req.body
+    const result = await service.registrarEntrada({ placa, tipo, usuario_id, fecha_hora_entrada })
+    res.status(201).json({ success: true, message: 'Entrada registrada', id: result.ticket_id, ...result })
+  }))
+
   router.get('/:id', handle(async (req, res) => {
     const data = await service.findById(req.params.id)
     itemResponse(res, data)

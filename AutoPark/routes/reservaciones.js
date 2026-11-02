@@ -6,8 +6,9 @@ module.exports = (db) => {
   const router = express.Router()
   const service = new ReservacionService(db)
 
+  // GET /api/reservaciones?q=placa-o-cliente&estado=confirmada
   router.get('/', handle(async (req, res) => {
-    const data = await service.findAll()
+    const data = await service.listar({ q: req.query.q, estado: req.query.estado })
     listResponse(res, data)
   }))
 
@@ -18,7 +19,17 @@ module.exports = (db) => {
 
   router.post('/', handle(async (req, res) => {
     const id = await service.createFromBody(req.body)
-    createdResponse(res, 'Reservacion created successfully', id)
+    createdResponse(res, 'Reservación confirmada', id)
+  }))
+
+  router.patch('/:id/cancelar', handle(async (req, res) => {
+    await service.cancelar(req.params.id)
+    messageResponse(res, 'Reservación cancelada')
+  }))
+
+  router.patch('/:id/llegada', handle(async (req, res) => {
+    const ticketId = await service.registrarLlegada(req.params.id)
+    res.json({ success: true, message: 'Llegada registrada', ticket_id: ticketId })
   }))
 
   router.delete('/:id', handle(async (req, res) => {

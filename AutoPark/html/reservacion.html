@@ -73,8 +73,8 @@
                 <div class="card table">
                     <h3>Reservaciones Programadas</h3>
                     <div class="filters">
-                        <input type="text" id="buscarPlaca" placeholder="Buscar placa o cliente..." onkeyup="filtrarTabla()" />
-                        <select id="filtroEstado" onchange="filtrarTabla()">
+                        <input type="text" id="buscarPlaca" placeholder="Buscar placa o cliente..." oninput="programarBusqueda()" />
+                        <select id="filtroEstado" onchange="cargarReservaciones()">
                             <option value="todas">Todas</option>
                             <option value="confirmada">Confirmadas</option>
                             <option value="completada">Completadas</option>
@@ -92,33 +92,7 @@
                             </tr>
                         </thead>
                         <tbody id="tablaReservaciones">
-                            <!-- Ejemplo de contenido dummy del layout o dinámico via JS -->
-                            <tr>
-                                <td>
-                                    <strong>Juan Pérez</strong><br>
-                                    <span style="font-size: 12px; color: #666;">ABC-1234 (Automóvil)</span>
-                                </td>
-                                <td>Hoy, 14:00</td>
-                                <td>2 Horas</td>
-                                <td><span class="badge blue">CONFIRMADA</span></td>
-                                <td>
-                                    <button class="badge green" style="border: none; cursor: pointer;">LLEGÓ</button>
-                                    <button class="badge" style="background:#e74c3c; border: none; cursor: pointer; color:white;">CANCELAR</button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>
-                                    <strong>María López</strong><br>
-                                    <span style="font-size: 12px; color: #666;">MOT-001 (Motor)</span>
-                                </td>
-                                <td>Mañana, 09:00</td>
-                                <td>1 Hora</td>
-                                <td><span class="badge blue">CONFIRMADA</span></td>
-                                <td>
-                                    <button class="badge green" style="border: none; cursor: pointer;">LLEGÓ</button>
-                                    <button class="badge" style="background:#e74c3c; border: none; cursor: pointer; color:white;">CANCELAR</button>
-                                </td>
-                            </tr>
+                            <tr><td colspan="5">Cargando reservaciones...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -126,96 +100,171 @@
         </main>
     </div>
 
-    <!-- Scripts simulados para el template -->
+    <script src="../js/toast.js"></script>
     <script>
+        const API = "http://localhost:3000/api/reservaciones";
+        const DURACION_TEXTO = { 1: "1 Hora", 2: "2 Horas", 4: "Medio Día (4 horas)", 8: "Día Completo (8 horas)" };
+        const TIPO_TEXTO = { carro: "Automóvil", motocicleta: "Motocicleta" };
+        let temporizadorBusqueda = null;
+
         document.addEventListener("DOMContentLoaded", () => {
             if (!localStorage.getItem("rol")) {
                 document.querySelectorAll(".nav-auth-only").forEach((el) => {
                     el.style.display = "none";
                 });
             }
-            // Inicializar la fecha mínima a hoy/ahora
             const now = new Date();
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
             document.getElementById("fecha").min = now.toISOString().slice(0, 16);
+            cargarReservaciones();
         });
 
-        function registrarReservacion() {
+        function escapar(texto) {
+            const div = document.createElement("div");
+            div.textContent = texto == null ? "" : String(texto);
+            return div.innerHTML;
+        }
+
+        function avisar(tipo, mensaje) {
+            if (typeof toast !== "undefined" && typeof toast[tipo] === "function") {
+                toast[tipo](mensaje);
+            } else {
+                alert(mensaje);
+            }
+        }
+
+        async function llamar(url, opciones = {}) {
+            try {
+                const res = await fetch(url, {
+                    headers: { "Content-Type": "application/json" },
+                    ...opciones
+                });
+                return await res.json();
+            } catch (error) {
+                console.error(error);
+                return { success: false, error: "No se pudo conectar con el servidor" };
+            }
+        }
+
+        async function registrarReservacion() {
             const cliente = document.getElementById("cliente").value.trim();
             const placa = document.getElementById("placa").value.trim().toUpperCase();
             const tipo = document.getElementById("tipo").value;
             const fecha = document.getElementById("fecha").value;
-            const tiempo = document.getElementById("tiempo").options[document.getElementById("tiempo").selectedIndex].text;
+            const duracion = parseInt(document.getElementById("tiempo").value, 10);
 
             if (!cliente || !placa || !fecha) {
-                alert("Por favor complete todos los campos (Cliente, Placa y Fecha).");
+                avisar("warning", "Complete cliente, placa y fecha.");
+                return;
+            }
+            if (new Date(fecha).getTime() <= Date.now()) {
+                avisar("warning", "La fecha de la reservación no puede ser pasada.");
                 return;
             }
 
-            // Simulamos agregar a la tabla
-            const tbody = document.getElementById("tablaReservaciones");
-            const tr = document.createElement("tr");
+            const data = await llamar(API, {
+                method: "POST",
+                body: JSON.stringify({
+                    cliente,
+                    placa,
+                    tipo,
+                    fecha_de_entrada: fecha,
+                    duracion_horas: duracion,
+                    usuario_id: parseInt(localStorage.getItem("usuario_id")) || 1
+                })
+            });
 
-            // Formatear fecha para la visibilidad
-            const fechaObj = new Date(fecha);
-            const fechaString = fechaObj.toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
+            if (!data.success) {
+                avisar("error", "No se pudo reservar: " + data.error);
+                return;
+            }
 
-            tr.innerHTML = `
-                <td>
-                    <strong>${cliente}</strong><br>
-                    <span style="font-size: 12px; color: #666;">${placa} (${tipo === 'carro' ? 'Automóvil' : 'Motocicleta'})</span>
-                </td>
-                <td>${fechaString}</td>
-                <td>${tiempo}</td>
-                <td><span class="badge blue">CONFIRMADA</span></td>
-                <td>
-                    <button class="badge green" style="border: none; cursor: pointer;" onclick="marcarLlegada(this)">LLEGÓ</button>
-                    <button class="badge" style="background:#e74c3c; border: none; cursor: pointer; color:white;" onclick="cancelarReserva(this)">CANCELAR</button>
-                </td>
-            `;
-
-            // Insertar al inicio de la tabla
-            tbody.insertBefore(tr, tbody.firstChild);
-
-            // Limpiar formulario
             document.getElementById("cliente").value = "";
             document.getElementById("placa").value = "";
             document.getElementById("fecha").value = "";
-            
-            alert("Reservación confirmada exitosamente.");
+            avisar("success", "Reservación confirmada.");
+            cargarReservaciones();
         }
 
-        function marcarLlegada(btn) {
-            if(confirm("¿Confirmar que el vehículo llegó al establecimiento?")) {
-                const tr = btn.closest("tr");
-                const tdEstado = tr.querySelector("td:nth-child(4)");
-                tdEstado.innerHTML = '<span class="badge green">COMPLETADA</span>';
-                btn.parentElement.innerHTML = '<span style="font-size:12px; color:#666;">Procesado</span>';
+        function formatearFecha(valor) {
+            const fecha = new Date(String(valor).replace(" ", "T"));
+            if (Number.isNaN(fecha.getTime())) return escapar(valor);
+            return fecha.toLocaleString([], { dateStyle: "short", timeStyle: "short" });
+        }
+
+        function badgeEstado(estado) {
+            if (estado === "completada") return '<span class="badge green">COMPLETADA</span>';
+            if (estado === "cancelada") return '<span class="badge" style="background:#e74c3c; color:white;">CANCELADA</span>';
+            return '<span class="badge blue">CONFIRMADA</span>';
+        }
+
+        function acciones(r) {
+            if (r.estado === "confirmada") {
+                return `<button class="badge green" style="border: none; cursor: pointer;" onclick="marcarLlegada(${Number(r.id)})">LLEGÓ</button>
+                    <button class="badge" style="background:#e74c3c; border: none; cursor: pointer; color:white;" onclick="cancelarReserva(${Number(r.id)})">CANCELAR</button>`;
             }
-        }
-
-        function cancelarReserva(btn) {
-            if(confirm("¿Estás seguro de cancelar esta reservación?")) {
-                const tr = btn.closest("tr");
-                const tdEstado = tr.querySelector("td:nth-child(4)");
-                tdEstado.innerHTML = '<span class="badge" style="background:#e74c3c; color:white;">CANCELADA</span>';
-                btn.parentElement.innerHTML = '<span style="font-size:12px; color:#666;">Cancelado</span>';
+            if (r.estado === "completada") {
+                return `<span style="font-size:12px; color:#666;">Ticket #${escapar(r.ticket_id)}</span>`;
             }
+            return '<span style="font-size:12px; color:#666;">Cancelado</span>';
         }
 
-        function filtrarTabla() {
-            // Función visual de ejemplo para buscar en la tabla por texto simple
-            const valorBusqueda = document.getElementById("buscarPlaca").value.toLowerCase();
-            const filas = document.querySelectorAll("#tablaReservaciones tr");
+        async function cargarReservaciones() {
+            const q = document.getElementById("buscarPlaca").value.trim();
+            const estado = document.getElementById("filtroEstado").value;
+            const params = new URLSearchParams({ estado });
+            if (q) params.set("q", q);
 
-            filas.forEach(fila => {
-                const texto = fila.innerText.toLowerCase();
-                if (texto.includes(valorBusqueda)) {
-                    fila.style.display = "";
-                } else {
-                    fila.style.display = "none";
-                }
-            });
+            const tbody = document.getElementById("tablaReservaciones");
+            const data = await llamar(`${API}?${params.toString()}`);
+
+            if (!data.success) {
+                tbody.innerHTML = `<tr><td colspan="5">${escapar(data.error)}</td></tr>`;
+                return;
+            }
+            if (data.data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5">No hay reservaciones.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.data.map((r) => `
+                <tr>
+                    <td>
+                        <strong>${escapar(r.cliente)}</strong><br>
+                        <span style="font-size: 12px; color: #666;">${escapar(r.placa)} (${escapar(TIPO_TEXTO[r.tipo] || r.tipo)})</span>
+                    </td>
+                    <td>${formatearFecha(r.fecha_de_entrada)}</td>
+                    <td>${escapar(DURACION_TEXTO[r.duracion_horas] || r.duracion_horas + " h")}</td>
+                    <td>${badgeEstado(r.estado)}</td>
+                    <td>${acciones(r)}</td>
+                </tr>`).join("");
+        }
+
+        function programarBusqueda() {
+            clearTimeout(temporizadorBusqueda);
+            temporizadorBusqueda = setTimeout(cargarReservaciones, 300);
+        }
+
+        async function marcarLlegada(id) {
+            if (!confirm("¿Confirmar que el vehículo llegó al establecimiento?")) return;
+            const data = await llamar(`${API}/${id}/llegada`, { method: "PATCH" });
+            if (data.success) {
+                avisar("success", `Llegada registrada. Ticket #${data.ticket_id}`);
+            } else {
+                avisar("error", data.error);
+            }
+            cargarReservaciones();
+        }
+
+        async function cancelarReserva(id) {
+            if (!confirm("¿Estás seguro de cancelar esta reservación?")) return;
+            const data = await llamar(`${API}/${id}/cancelar`, { method: "PATCH" });
+            if (data.success) {
+                avisar("success", "Reservación cancelada.");
+            } else {
+                avisar("error", data.error);
+            }
+            cargarReservaciones();
         }
     </script>
 </body>

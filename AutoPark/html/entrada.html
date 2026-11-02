@@ -98,30 +98,14 @@
             if (!fecha) fecha = new Date().toISOString().slice(0, 16);
 
             try {
-                const resVehiculo = await fetch("http://localhost:3000/api/vehiculos", {
+                const resTicket = await fetch("http://localhost:3000/api/tickets/entrada", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         placa,
                         tipo,
-                        usuario_id: parseInt(localStorage.getItem("usuario_id")) || 1
-                    })
-                });
-
-                const dataVehiculo = await resVehiculo.json();
-
-                if (!dataVehiculo.success) {
-                    toast.error("Error al registrar vehículo: " + dataVehiculo.error);
-                    return;
-                }
-
-                const resTicket = await fetch("http://localhost:3000/api/tickets", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        vehiculo_id: dataVehiculo.id,
-                        fecha_hora_entrada: new Date(fecha).toISOString().slice(0, 19).replace("T", " "),
-                        status_de_pago: "pendiente"
+                        usuario_id: parseInt(localStorage.getItem("usuario_id")) || 1,
+                        fecha_hora_entrada: new Date(fecha).toISOString().slice(0, 19).replace("T", " ")
                     })
                 });
 
