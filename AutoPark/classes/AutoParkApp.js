@@ -14,6 +14,7 @@ const reservacionesRoutes = require('../routes/reservaciones')
 const seccionesParqueoRoutes = require('../routes/secciones_parqueo')
 const pagosRoutes = require('../routes/pagos')
 const ratesRoutes = require('../routes/rates')
+const climaRoutes = require('../routes/clima')
 
 class AutoParkApp {
   constructor(db, options = {}) {
@@ -79,6 +80,8 @@ class AutoParkApp {
     this.app.use('/api/secciones_parqueo', seccionesParqueoRoutes(this.db))
     this.app.use('/api/pagos', pagosRoutes(this.db))
     this.app.use('/api/rates', ratesRoutes(this.db))
+    this.app.use('/api/clima', climaRoutes())
+
   }
 
   setupErrorHandling() {
