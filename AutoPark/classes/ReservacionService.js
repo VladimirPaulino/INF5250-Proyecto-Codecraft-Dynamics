@@ -1,28 +1,21 @@
 const BaseService = require('./BaseService')
 const TicketService = require('./TicketService')
 const { ConflictError, NotFoundError, ValidationError } = require('./errors')
+const { aDatetime, parsearFecha } = require('./dateUtils')
+const { validarPlaca } = require('./placaUtils')
 
 const DURACIONES = [1, 2, 4, 8]
 const TIPOS = ['carro', 'motocicleta']
 const ESTADOS = ['confirmada', 'completada', 'cancelada']
+const GRACIA_LLEGADA_MS = 30 * 60 * 1000
 
-function pad(n) {
-  return String(n).padStart(2, '0')
-}
-
-// Formato DATETIME de MySQL en hora local del servidor.
-function aDatetime(fecha) {
-  return `${fecha.getFullYear()}-${pad(fecha.getMonth() + 1)}-${pad(fecha.getDate())} ` +
-    `${pad(fecha.getHours())}:${pad(fecha.getMinutes())}:${pad(fecha.getSeconds())}`
-}
-
-// Acepta "YYYY-MM-DDTHH:mm" (input datetime-local) o "YYYY-MM-DD HH:mm[:ss]".
-function parsearFecha(valor) {
-  if (!valor) return null
-  const texto = String(valor).trim().replace(' ', 'T')
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(texto)) return null
-  const fecha = new Date(texto)
-  return Number.isNaN(fecha.getTime()) ? null : fecha
+const ESPACIO_DEFAULT = {
+  name: 'AutoPark Principal',
+  address: 'Campus UASD',
+  // Cupo bajo para poder probar RF-41 manualmente (llenar el horario).
+  espacio_total: 2,
+  tiempo_abierto: 6,
+  tiempo_cerrado: 22
 }
 
 class ReservacionService extends BaseService {
@@ -50,14 +43,14 @@ class ReservacionService extends BaseService {
   /** RF-32 a RF-36 y RF-41. */
   async createFromBody(body) {
     const cliente = String(body.cliente || '').trim()
-    const placa = String(body.placa || '').trim().toUpperCase()
     const faltan = []
     if (!cliente) faltan.push('cliente')
-    if (!placa) faltan.push('placa')
+    if (!body.placa) faltan.push('placa')
     if (!body.fecha_de_entrada) faltan.push('fecha_de_entrada')
     if (faltan.length) {
       throw new ValidationError(`Faltan campos obligatorios: ${faltan.join(', ')}`)
     }
+    const placa = validarPlaca(body.placa)
 
     const inicio = parsearFecha(body.fecha_de_entrada)
     if (!inicio) {
@@ -75,6 +68,9 @@ class ReservacionService extends BaseService {
     if (!TIPOS.includes(tipo)) {
       throw new ValidationError('El tipo debe ser carro o motocicleta')
     }
+    if (!body.usuario_id) {
+      throw new ValidationError('Debe iniciar sesión para reservar')
+    }
     const fin = new Date(inicio.getTime() + duracion * 60 * 60 * 1000)
 
     return this.db.transaction(async (trx) => {
@@ -82,7 +78,7 @@ class ReservacionService extends BaseService {
       await this.verificarCupo(trx, espacio, inicio, fin)
 
       const [id] = await trx('reservaciones').insert({
-        usuario_id: body.usuario_id || 1,
+        usuario_id: body.usuario_id,
         espacio_id: espacio.id,
         cliente,
         placa,
@@ -97,26 +93,45 @@ class ReservacionService extends BaseService {
   }
 
   async obtenerEspacio(trx, espacioId) {
-    const query = trx('espacios_parqueo').forUpdate()
-    const espacio = espacioId
-      ? await query.where('id', espacioId).first()
-      : await query.orderBy('id').first()
+    if (espacioId) {
+      const espacio = await trx('espacios_parqueo').where('id', espacioId).forUpdate().first()
+      if (!espacio) {
+        throw new ValidationError('El espacio de parqueo indicado no existe')
+      }
+      return this.validarCapacidad(espacio)
+    }
+
+    let espacio = await trx('espacios_parqueo').orderBy('id').forUpdate().first()
     if (!espacio) {
-      throw new ValidationError('No hay un espacio de parqueo registrado para reservar')
+      // Sin lote configurado las reservas siempre fallaban; crea uno por defecto.
+      const [id] = await trx('espacios_parqueo').insert(ESPACIO_DEFAULT)
+      espacio = await trx('espacios_parqueo').where('id', id).forUpdate().first()
+    }
+    return this.validarCapacidad(espacio)
+  }
+
+  validarCapacidad(espacio) {
+    const total = Number(espacio.espacio_total)
+    if (!Number.isFinite(total) || total <= 0) {
+      throw new ValidationError(
+        `El espacio "${espacio.name}" no tiene capacidad configurada (espacio_total debe ser > 0)`
+      )
     }
     return espacio
   }
 
   /** RF-41: solo cuentan las reservas confirmadas que se cruzan con el intervalo. */
   async verificarCupo(trx, espacio, inicio, fin) {
-    const fila = await trx('reservaciones')
+    // FOR UPDATE evita que dos reservas concurrentes sobrepasen el cupo.
+    const solapadas = await trx('reservaciones')
       .where({ espacio_id: espacio.id, estado: 'confirmada' })
       .where('fecha_de_entrada', '<', aDatetime(fin))
       .where('fecha_de_salida', '>', aDatetime(inicio))
-      .count({ total: 'id' })
-      .first()
-    const ocupadas = Number(fila.total)
-    if (ocupadas >= Number(espacio.espacio_total)) {
+      .forUpdate()
+      .select('id')
+    const ocupadas = solapadas.length
+    const capacidad = Number(espacio.espacio_total)
+    if (ocupadas >= capacidad) {
       throw new ConflictError('No hay cupo disponible en ese horario')
     }
   }
@@ -142,6 +157,15 @@ class ReservacionService extends BaseService {
   async registrarLlegada(id) {
     return this.db.transaction(async (trx) => {
       const reserva = await this.obtenerConfirmada(trx, id)
+      const ahora = Date.now()
+      const inicio = new Date(reserva.fecha_de_entrada).getTime() - GRACIA_LLEGADA_MS
+      const fin = new Date(reserva.fecha_de_salida).getTime() + GRACIA_LLEGADA_MS
+      if (ahora < inicio || ahora > fin) {
+        throw new ValidationError(
+          'Solo puede registrar la llegada dentro de la ventana de la reservación (±30 min)'
+        )
+      }
+
       const { ticket_id } = await this.tickets.registrarEntrada({
         placa: reserva.placa,
         tipo: reserva.tipo,
@@ -153,14 +177,10 @@ class ReservacionService extends BaseService {
     })
   }
 
-  async updateFromBody(id, body) {
-    const { usuario_id, espacio_id, fecha_de_entrada, fecha_de_salida } = body
-    return this.update(id, {
-      usuario_id,
-      espacio_id,
-      fecha_de_entrada,
-      fecha_de_salida
-    })
+  async updateFromBody() {
+    throw new ValidationError(
+      'No se puede editar una reservación directamente. Cancele y cree una nueva.'
+    )
   }
 }
 

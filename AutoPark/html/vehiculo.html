@@ -66,25 +66,28 @@
                 </table>
             </div>
 
+            <script src="../js/api.js"></script>
+            <script src="../js/toast.js"></script>
             <script>
                 document.addEventListener("DOMContentLoaded", () => {
+                    if (!localStorage.getItem("token")) {
+                        window.location.href = "/login";
+                        return;
+                    }
                     const rol = localStorage.getItem("rol");
                     if (!rol) {
                         document.querySelectorAll(".nav-auth-only").forEach((el) => {
                             el.style.display = "none";
                         });
-                        window.location.href = "/dashboard";
                     }
+                    cargarMovimientos();
                 });
 
-                const PRECIO_HORA = 50; // RD$ por hora
-
-                // Cargar historial
                 async function cargarMovimientos() {
-                    const res = await fetch('/api/tickets');
-                    const result = await res.json();
+                    const result = await peticionBackend('tickets', 'GET');
                     const tbody = document.getElementById('listaMovimientos');
                     tbody.innerHTML = '';
+                    if (!result.success) return;
 
                     result.data.forEach(t => {
                         const entrada = new Date(t.fecha_hora_entrada);
@@ -103,7 +106,7 @@
                     </td>
                     <td>
                         ${esPendiente ?
-                                `<button class="btn-salida" onclick="registrarSalida(${t.id}, '${t.fecha_hora_entrada}', ${t.vehiculo_id})">Registrar Salida</button>` :
+                                `<button class="btn-salida" onclick="registrarSalida(${t.id})">Registrar Salida</button>` :
                                 `<span style="color:gray">Completo</span>`}
                     </td>
                 </tr>
@@ -111,62 +114,56 @@
                     });
                 }
 
-                // POST: Registro de Entrada
                 async function registrarEntrada() {
                     const v_id = document.getElementById('vehiculo_id').value;
                     if (!v_id) return alert("Ingrese ID de vehículo");
 
-                    const data = {
-                        vehiculo_id: v_id,
-                        fecha_hora_entrada: new Date().toISOString(), // Hora actual del sistema
-                        status_de_pago: 'pendiente'
-                    };
+                    const vehiculo = await peticionBackend(`vehiculos/${v_id}`, 'GET');
+                    if (!vehiculo.success) {
+                        toast.error(vehiculo.error || 'Vehículo no encontrado');
+                        return;
+                    }
 
-                    await fetch('/api/tickets', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(data)
+                    const data = await peticionBackend('tickets/entrada', 'POST', {
+                        placa: vehiculo.data.placa,
+                        tipo: vehiculo.data.tipo
                     });
 
+                    if (!data.success) {
+                        toast.error(data.error || 'No se pudo registrar la entrada');
+                        return;
+                    }
+
                     document.getElementById('vehiculo_id').value = '';
+                    toast.success('Entrada registrada');
                     cargarMovimientos();
                 }
 
-                // PUT: Registro de Salida y Cálculo de Cobro
-                async function registrarSalida(ticketId, fechaEntrada, vehiculoId) {
-                    const ahora = new Date();
-                    const entrada = new Date(fechaEntrada);
-
-                    // Calcular horas (mínimo 1 hora)
-                    const diffMs = ahora - entrada;
-                    const diffHoras = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60)));
-                    const total = diffHoras * PRECIO_HORA;
-
-                    if (confirm(`Resumen de Salida:\nHoras: ${diffHoras}\nTotal a pagar: RD$ ${total}\n\n¿Confirmar salida?`)) {
-                        const data = {
-                            vehiculo_id: vehiculoId,
-                            fecha_hora_entrada: fechaEntrada,
-                            fecha_hora_salida: ahora.toISOString(),
-                            total_pagar: total,
-                            status_de_pago: 'pagado'
-                        };
-
-                        await fetch(`/api/tickets/${ticketId}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(data)
-                        });
-
-                        cargarMovimientos();
+                async function registrarSalida(ticketId) {
+                    const cotizacion = await peticionBackend(`tickets/salida/cotizar?ticket_id=${ticketId}`, 'GET');
+                    if (!cotizacion.success) {
+                        toast.error(cotizacion.error || 'No se pudo cotizar');
+                        return;
                     }
+
+                    const { horas, monto } = cotizacion.data;
+                    if (!confirm(`Resumen de Salida:\nHoras: ${horas}\nTotal a pagar: RD$ ${monto}\n\n¿Confirmar salida?`)) {
+                        return;
+                    }
+
+                    const data = await peticionBackend('tickets/salida', 'POST', { ticket_id: ticketId });
+                    if (!data.success) {
+                        toast.error(data.error || 'No se pudo registrar la salida');
+                        return;
+                    }
+
+                    toast.success(`Salida registrada. Total RD$ ${data.total_pagar}`);
+                    cargarMovimientos();
                 }
 
-                // Reloj en tiempo real
                 setInterval(() => {
                     document.getElementById('reloj').innerText = new Date().toLocaleTimeString();
                 }, 1000);
-
-                cargarMovimientos();
             </script>
 
 </body>

@@ -67,10 +67,13 @@
                     Inicio</a>
             </div>
 
+            <script src="../js/api.js"></script>
             <script>
                 let ticketsCargados = []; // Variable global para guardar los datos
 
-                if (!localStorage.getItem("rol")) {
+                if (!localStorage.getItem("token")) {
+                    window.location.href = "/login";
+                } else if (!localStorage.getItem("rol")) {
                     document.querySelectorAll(".nav-auth-only").forEach((el) => {
                         el.style.display = "none";
                     });
@@ -79,9 +82,8 @@
                 // 1. Obtener todos los tickets al iniciar
                 async function cargarTickets() {
                     try {
-                        const res = await fetch('/api/tickets');
-                        const result = await res.json();
-                        ticketsCargados = result.data; // Guardamos copia para filtrar
+                        const result = await peticionBackend('tickets', 'GET');
+                        ticketsCargados = result.data || [];
                         mostrarEnTabla(ticketsCargados);
                     } catch (err) {
                         console.error("Error cargando tickets:", err);

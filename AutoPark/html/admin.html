@@ -96,12 +96,19 @@
         </div>
     </div>
 
+    <script src="../js/api.js"></script>
     <script src="../js/toast.js"></script>
     <script>
         let todosLosUsuarios = [];
 
+        function escapar(texto) {
+            const div = document.createElement("div");
+            div.textContent = texto == null ? "" : String(texto);
+            return div.innerHTML;
+        }
+
         document.addEventListener("DOMContentLoaded", () => {
-            if (localStorage.getItem("rol") !== "admin") {
+            if (!localStorage.getItem("token") || localStorage.getItem("rol") !== "admin") {
                 toast.error("Acceso denegado");
                 setTimeout(() => window.location.href = "/dashboard", 1500);
                 return;
@@ -111,9 +118,11 @@
 
         async function cargarUsuarios() {
             try {
-                const res = await fetch("http://localhost:3000/api/usuarios");
-                const data = await res.json();
-                if (!data.success) return;
+                const data = await peticionBackend("usuarios", "GET");
+                if (!data.success) {
+                    toast.error(data.error || "Error cargando usuarios");
+                    return;
+                }
 
                 todosLosUsuarios = data.data;
                 document.getElementById("totalUsuarios").innerText = todosLosUsuarios.length;
@@ -133,13 +142,13 @@
             }
             tbody.innerHTML = usuarios.map(u => `
           <tr>
-            <td>${u.nombre}</td>
-            <td>${u.email}</td>
-            <td><span class="badge ${u.role === 'admin' ? 'blue' : ''}">${u.role}</span></td>
-            <td><span class="badge ${u.estado === 'activo' ? 'green' : 'orange'}">${u.estado}</span></td>
+            <td>${escapar(u.nombre)}</td>
+            <td>${escapar(u.email)}</td>
+            <td><span class="badge ${u.role === 'admin' ? 'blue' : ''}">${escapar(u.role)}</span></td>
+            <td><span class="badge ${u.estado === 'activo' ? 'green' : 'orange'}">${escapar(u.estado)}</span></td>
             <td>
-              <button class="icon-btn" onclick="editarUsuario(${u.id})"><i class="fa fa-edit"></i></button>
-              <button class="icon-btn red" onclick="eliminarUsuario(${u.id})"><i class="fa fa-trash"></i></button>
+              <button class="icon-btn" onclick="editarUsuario(${Number(u.id)})"><i class="fa fa-edit"></i></button>
+              <button class="icon-btn red" onclick="eliminarUsuario(${Number(u.id)})"><i class="fa fa-trash"></i></button>
             </td>
           </tr>
         `).join("");
@@ -187,7 +196,7 @@
             const nombre = document.getElementById("inputNombre").value.trim();
             const email = document.getElementById("inputEmail").value.trim();
             const telefono = document.getElementById("inputTelefono").value.trim();
-            const contrasena = document.getElementById("inputContrasena").value.trim();
+            const contrasena = document.getElementById("inputContrasena").value;
             const role = document.getElementById("inputRol").value;
             const estado = document.getElementById("inputEstado").value;
 
@@ -198,19 +207,12 @@
             if (contrasena) body.contrasena = contrasena;
 
             try {
-                const url = id ? `http://localhost:3000/api/usuarios/${id}` : "http://localhost:3000/api/usuarios";
-                const method = id ? "PUT" : "POST";
-
-                const res = await fetch(url, {
-                    method,
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(body)
-                });
-
-                const data = await res.json();
+                const data = id
+                    ? await peticionBackend(`usuarios/${id}`, "PUT", body)
+                    : await peticionBackend("usuarios", "POST", body);
 
                 if (data.success) {
-                    toast.success(id ? "Usuario actualizado ✅" : "Usuario creado ✅");
+                    toast.success(id ? "Usuario actualizado" : "Usuario creado");
                     closeModal();
                     cargarUsuarios();
                 } else {
@@ -224,10 +226,9 @@
         async function eliminarUsuario(id) {
             if (!confirm("¿Estás seguro de eliminar este usuario?")) return;
             try {
-                const res = await fetch(`http://localhost:3000/api/usuarios/${id}`, { method: "DELETE" });
-                const data = await res.json();
+                const data = await peticionBackend(`usuarios/${id}`, "DELETE");
                 if (data.success) {
-                    toast.success("Usuario eliminado ✅");
+                    toast.success("Usuario eliminado");
                     cargarUsuarios();
                 } else {
                     toast.error("Error: " + data.error);

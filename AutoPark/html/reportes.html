@@ -82,12 +82,13 @@
         </main>
     </div>
 
+    <script src="../js/api.js"></script>
     <script src="../js/toast.js"></script>
     <script>
         let todosPagos = [];
 
         document.addEventListener("DOMContentLoaded", () => {
-            if (localStorage.getItem("rol") !== "admin") {
+            if (!localStorage.getItem("token") || localStorage.getItem("rol") !== "admin") {
                 toast.error("Acceso denegado");
                 setTimeout(() => window.location.href = "/dashboard", 1500);
                 return;
@@ -97,13 +98,10 @@
 
         async function cargarReportes() {
             try {
-                const [resPagos, resTickets] = await Promise.all([
-                    fetch("http://localhost:3000/api/pagos"),
-                    fetch("http://localhost:3000/api/tickets")
+                const [dataPagos, dataTickets] = await Promise.all([
+                    peticionBackend("pagos", "GET"),
+                    peticionBackend("tickets", "GET")
                 ]);
-
-                const dataPagos = await resPagos.json();
-                const dataTickets = await resTickets.json();
 
                 if (dataPagos.success) {
                     todosPagos = dataPagos.data;
@@ -114,7 +112,7 @@
                 }
 
                 if (dataTickets.success) {
-                    const pendientes = dataTickets.data.filter(t => t.status_de_pago === "pendiente");
+                    const pendientes = dataTickets.data.filter(t => !t.fecha_hora_salida);
                     document.getElementById("totalPendientes").innerText = pendientes.length;
 
                     const tbodyPendientes = document.getElementById("listaPendientes");

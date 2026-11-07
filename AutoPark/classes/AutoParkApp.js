@@ -53,7 +53,7 @@ class AutoParkApp {
       '/vehiculo': 'vehiculo.html',
       '/tickets': 'ticket.html',
       '/reservacion': 'reservacion.html',
-      '/usuarios': 'usuarios.html'
+      '/usuarios': 'admin.html'
     }
 
     Object.entries(pages).forEach(([route, file]) => {

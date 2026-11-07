@@ -48,7 +48,7 @@
                     <h3>Nueva Reservación</h3>
                     
                     <input type="text" id="cliente" placeholder="Nombre completo del cliente" />
-                    <input type="text" id="placa" placeholder="Placa del Vehículo (Ej: MCX-5585)" />
+                    <input type="text" id="placa" placeholder="Placa (Ej: MCX5585, sin guiones ni espacios)" />
                     
                     <select id="tipo">
                         <option value="carro">Automóvil</option>
@@ -66,6 +66,7 @@
                         <option value="8">Día Completo (8 horas)</option>
                     </select>
 
+                    <p id="cupoInfo" style="margin-top: 12px; font-size: 13px; color: #6b7280;"></p>
                     <button class="btn-primary" style="margin-top: 20px;" onclick="registrarReservacion()">CONFIRMAR RESERVACIÓN</button>
                 </div>
 
@@ -100,14 +101,20 @@
         </main>
     </div>
 
+    <script src="../js/api.js"></script>
+    <script src="../js/placa.js"></script>
     <script src="../js/toast.js"></script>
     <script>
-        const API = "http://localhost:3000/api/reservaciones";
+        const API = "/api/reservaciones";
         const DURACION_TEXTO = { 1: "1 Hora", 2: "2 Horas", 4: "Medio Día (4 horas)", 8: "Día Completo (8 horas)" };
         const TIPO_TEXTO = { carro: "Automóvil", motocicleta: "Motocicleta" };
         let temporizadorBusqueda = null;
 
         document.addEventListener("DOMContentLoaded", () => {
+            if (!localStorage.getItem("token")) {
+                window.location.href = "/login";
+                return;
+            }
             if (!localStorage.getItem("rol")) {
                 document.querySelectorAll(".nav-auth-only").forEach((el) => {
                     el.style.display = "none";
@@ -116,8 +123,21 @@
             const now = new Date();
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
             document.getElementById("fecha").min = now.toISOString().slice(0, 16);
+            cargarCupo();
             cargarReservaciones();
         });
+
+        async function cargarCupo() {
+            const info = document.getElementById("cupoInfo");
+            if (!info) return;
+            const data = await llamar("/api/espacios_parqueo");
+            if (!data.success || !data.data?.length) {
+                info.textContent = "No hay espacio de parqueo configurado.";
+                return;
+            }
+            const espacio = data.data[0];
+            info.textContent = `Cupo del parqueo: ${espacio.espacio_total} espacio(s). Si ya hay esa cantidad de reservaciones confirmadas en el mismo horario, la siguiente se rechaza.`;
+        }
 
         function escapar(texto) {
             const div = document.createElement("div");
@@ -136,8 +156,8 @@
         async function llamar(url, opciones = {}) {
             try {
                 const res = await fetch(url, {
-                    headers: { "Content-Type": "application/json" },
-                    ...opciones
+                    ...opciones,
+                    headers: { ...authHeaders(), ...(opciones.headers || {}) }
                 });
                 return await res.json();
             } catch (error) {
@@ -148,15 +168,20 @@
 
         async function registrarReservacion() {
             const cliente = document.getElementById("cliente").value.trim();
-            const placa = document.getElementById("placa").value.trim().toUpperCase();
+            const checkPlaca = validarPlacaInput(document.getElementById("placa").value);
             const tipo = document.getElementById("tipo").value;
             const fecha = document.getElementById("fecha").value;
             const duracion = parseInt(document.getElementById("tiempo").value, 10);
 
-            if (!cliente || !placa || !fecha) {
+            if (!cliente || !fecha) {
                 avisar("warning", "Complete cliente, placa y fecha.");
                 return;
             }
+            if (!checkPlaca.ok) {
+                avisar("warning", checkPlaca.error);
+                return;
+            }
+            const placa = checkPlaca.placa;
             if (new Date(fecha).getTime() <= Date.now()) {
                 avisar("warning", "La fecha de la reservación no puede ser pasada.");
                 return;
@@ -169,8 +194,7 @@
                     placa,
                     tipo,
                     fecha_de_entrada: fecha,
-                    duracion_horas: duracion,
-                    usuario_id: parseInt(localStorage.getItem("usuario_id")) || 1
+                    duracion_horas: duracion
                 })
             });
 

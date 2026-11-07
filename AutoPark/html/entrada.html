@@ -45,7 +45,7 @@
                             <span class="slider"></span>
                         </label>
                     </div>
-                    <input type="text" id="placa" placeholder="Ej: MCX-5585" />
+                    <input type="text" id="placa" placeholder="Ej: MCX5585 (sin guiones ni espacios)" />
                     <select id="tipo">
                         <option value="carro">Automóvil</option>
                         <option value="motocicleta">Motor</option>
@@ -83,41 +83,41 @@
         </main>
     </div>
 
+    <script src="../js/api.js"></script>
+    <script src="../js/placa.js"></script>
     <script src="../js/toast.js"></script>
     <script>
+        function fechaLocalMySQL(valor) {
+            const d = valor ? new Date(valor) : new Date();
+            const pad = (n) => String(n).padStart(2, "0");
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ` +
+                `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        }
+
         async function registrarEntrada() {
-            const placa = document.getElementById("placa").value.trim().toUpperCase();
+            const check = validarPlacaInput(document.getElementById("placa").value);
+            if (!check.ok) {
+                toast.warning(check.error);
+                return;
+            }
+            const placa = check.placa;
             const tipo = document.getElementById("tipo").value;
             let fecha = document.getElementById("fecha").value;
 
-            if (!placa) {
-                toast.warning("Ingresa la placa del vehículo");
-                return;
-            }
-
-            if (!fecha) fecha = new Date().toISOString().slice(0, 16);
-
             try {
-                const resTicket = await fetch("http://localhost:3000/api/tickets/entrada", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        placa,
-                        tipo,
-                        usuario_id: parseInt(localStorage.getItem("usuario_id")) || 1,
-                        fecha_hora_entrada: new Date(fecha).toISOString().slice(0, 19).replace("T", " ")
-                    })
+                const dataTicket = await peticionBackend("tickets/entrada", "POST", {
+                    placa,
+                    tipo,
+                    fecha_hora_entrada: fecha ? fechaLocalMySQL(fecha) : fechaLocalMySQL()
                 });
 
-                const dataTicket = await resTicket.json();
-
                 if (dataTicket.success) {
-                    toast.success("Entrada registrada 🚗");
+                    toast.success("Entrada registrada");
                     document.getElementById("placa").value = "";
                     document.getElementById("fecha").value = "";
                     cargarUltimosIngresos();
                 } else {
-                    toast.error("Error al crear ticket: " + dataTicket.error);
+                    toast.error(dataTicket.error || "No se pudo registrar la entrada");
                 }
 
             } catch (error) {
@@ -128,8 +128,7 @@
 
         async function cargarUltimosIngresos() {
             try {
-                const res = await fetch("http://localhost:3000/api/tickets");
-                const data = await res.json();
+                const data = await peticionBackend("tickets", "GET");
                 const tbody = document.getElementById("tablaIngresos");
 
                 if (!data.success || data.data.length === 0) {
@@ -151,6 +150,10 @@
         }
 
         document.addEventListener("DOMContentLoaded", () => {
+            if (!localStorage.getItem("token")) {
+                window.location.href = "/login";
+                return;
+            }
             if (!localStorage.getItem("rol")) {
                 document.querySelectorAll(".nav-auth-only").forEach((el) => {
                     el.style.display = "none";

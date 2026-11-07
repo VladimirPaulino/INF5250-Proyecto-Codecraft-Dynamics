@@ -75,7 +75,13 @@ class ToastManager {
       font-family: sans-serif;
     `
 
-    toast.innerHTML = `<span style="font-size:18px">${icon}</span><span>${message}</span>`
+    const iconEl = document.createElement('span')
+    iconEl.style.fontSize = '18px'
+    iconEl.textContent = icon
+    const textEl = document.createElement('span')
+    textEl.textContent = message == null ? '' : String(message)
+    toast.appendChild(iconEl)
+    toast.appendChild(textEl)
     toast.addEventListener('click', () => this.remove(toast))
     container.appendChild(toast)
     setTimeout(() => this.remove(toast), duration)

@@ -138,7 +138,7 @@
 
                     <!-- BUSCADOR POR PLACA -->
                     <div class="search-bar">
-                        <input type="text" id="inputBusqueda" placeholder="Buscar por placa... Ej: MCX-5585" />
+                        <input type="text" id="inputBusqueda" placeholder="Buscar por placa... Ej: MCX5585" />
                         <button class="btn blue" onclick="buscarPorPlaca()"><i class="fa fa-search"></i> Buscar</button>
                         <button class="btn orange" onclick="limpiarBusqueda()"><i class="fa fa-times"></i>
                             Limpiar</button>
@@ -181,18 +181,30 @@
         </div>
     </div>
 
+    <script src="../js/api.js"></script>
     <script>
         let todosLosTickets = [];
         let todosLosVehiculos = [];
 
+        function escapar(texto) {
+            const div = document.createElement("div");
+            div.textContent = texto == null ? "" : String(texto);
+            return div.innerHTML;
+        }
+
+        function ticketsActivos(lista) {
+            return lista.filter((t) => !t.fecha_hora_salida);
+        }
+
         document.addEventListener("DOMContentLoaded", () => {
             const rol = localStorage.getItem("rol");
+            const nombre = localStorage.getItem("nombre");
 
             if (rol === "admin") {
                 document.getElementById("adminSection").style.display = "block";
-                document.getElementById("userName").innerText = "Admin";
+                document.getElementById("userName").innerText = nombre || "Admin";
             } else if (rol) {
-                document.getElementById("userName").innerText = "Operador";
+                document.getElementById("userName").innerText = nombre || "Operador";
             } else {
                 document.getElementById("userName").innerText = "Invitado";
                 const btnSalir = document.querySelector('button[onclick="logout()"]');
@@ -213,24 +225,20 @@
 
         async function cargarDashboard() {
             try {
-                const [resTickets, resPagos, resVehiculos] = await Promise.all([
-                    fetch("http://localhost:3000/api/tickets"),
-                    fetch("http://localhost:3000/api/pagos"),
-                    fetch("http://localhost:3000/api/vehiculos")
+                const [dataTickets, dataPagos, dataVehiculos] = await Promise.all([
+                    peticionBackend("tickets", "GET"),
+                    peticionBackend("pagos", "GET"),
+                    peticionBackend("vehiculos", "GET")
                 ]);
-
-                const dataTickets = await resTickets.json();
-                const dataPagos = await resPagos.json();
-                const dataVehiculos = await resVehiculos.json();
 
                 if (!dataTickets.success) return;
 
                 todosLosTickets = dataTickets.data;
                 todosLosVehiculos = dataVehiculos.success ? dataVehiculos.data : [];
 
-                const pendientes = todosLosTickets.filter(t => t.status_de_pago === "pendiente");
+                const activos = ticketsActivos(todosLosTickets);
 
-                document.getElementById("countActivos").innerText = pendientes.length;
+                document.getElementById("countActivos").innerText = activos.length;
                 document.getElementById("totalTickets").innerText = todosLosTickets.length;
 
                 let totalIngresos = 0;
@@ -239,7 +247,7 @@
                 }
                 document.getElementById("totalIngresos").innerText = `$${totalIngresos.toFixed(2)}`;
 
-                renderTabla(pendientes);
+                renderTabla(activos);
 
             } catch (error) {
                 console.error("Error cargando dashboard:", error);
@@ -262,9 +270,9 @@
                 return `
                     <tr class="clickable" onclick="verDetalle(${t.id})">
                         <td>${new Date(t.fecha_hora_entrada).toLocaleString()}</td>
-                        <td><strong>${placa}</strong></td>
-                        <td>${tipo}</td>
-                        <td><span class="badge blue">PENDIENTE</span></td>
+                        <td><strong>${escapar(placa)}</strong></td>
+                        <td>${escapar(tipo)}</td>
+                        <td><span class="badge blue">EN PARQUEO</span></td>
                     </tr>
                 `;
             }).join("");
@@ -278,15 +286,18 @@
                 return;
             }
 
-            const vehiculo = todosLosVehiculos.find(v => v.placa.toUpperCase() === busqueda);
+            const placaBuscada = busqueda.replace(/[\s-]/g, '');
+            const vehiculo = todosLosVehiculos.find(v =>
+                String(v.placa || '').toUpperCase().replace(/[\s-]/g, '') === placaBuscada
+            );
 
             if (!vehiculo) {
                 alert("No se encontró ningún vehículo con esa placa");
                 return;
             }
 
-            const ticketsFiltrados = todosLosTickets.filter(t =>
-                t.vehiculo_id === vehiculo.id && t.status_de_pago === "pendiente"
+            const ticketsFiltrados = ticketsActivos(todosLosTickets).filter(t =>
+                t.vehiculo_id === vehiculo.id
             );
 
             if (ticketsFiltrados.length === 0) {
@@ -299,8 +310,7 @@
 
         function limpiarBusqueda() {
             document.getElementById("inputBusqueda").value = "";
-            const pendientes = todosLosTickets.filter(t => t.status_de_pago === "pendiente");
-            renderTabla(pendientes);
+            renderTabla(ticketsActivos(todosLosTickets));
         }
 
         function verDetalle(ticketId) {
@@ -330,6 +340,7 @@
             localStorage.removeItem("rol");
             localStorage.removeItem("usuario_id");
             localStorage.removeItem("nombre");
+            localStorage.removeItem("token");
             window.location.href = "/login";
         }
     </script>

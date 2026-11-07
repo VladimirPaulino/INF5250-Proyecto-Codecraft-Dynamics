@@ -1,22 +1,42 @@
 class ApiClient {
-  constructor(baseUrl = 'http://localhost:3000/api') {
+  constructor(baseUrl = '/api') {
     this.baseUrl = baseUrl
+  }
+
+  getToken() {
+    return localStorage.getItem('token')
+  }
+
+  authHeaders() {
+    const headers = { 'Content-Type': 'application/json' }
+    const token = this.getToken()
+    if (token) headers.Authorization = `Bearer ${token}`
+    return headers
   }
 
   async request(endpoint, method = 'GET', data = null) {
     try {
-      const response = await fetch(`${this.baseUrl}/${endpoint}`, {
+      const response = await fetch(`${this.baseUrl}/${endpoint.replace(/^\//, '')}`, {
         method,
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: this.authHeaders(),
         body: data ? JSON.stringify(data) : null
       })
 
-      return await response.json()
+      const contentType = response.headers.get('content-type') || ''
+      const payload = contentType.includes('application/json')
+        ? await response.json()
+        : { success: false, error: await response.text() }
+
+      if (!response.ok && payload && !payload.error) {
+        payload.error = `Error HTTP ${response.status}`
+      }
+      if (payload && payload.success === undefined) {
+        payload.success = response.ok
+      }
+      return payload
     } catch (error) {
       console.error('Error de conexión:', error)
-      return { error: 'No se pudo conectar con el servidor' }
+      return { success: false, error: 'No se pudo conectar con el servidor' }
     }
   }
 
@@ -39,7 +59,14 @@ class ApiClient {
 
 const apiClient = new ApiClient()
 
-// Compatibilidad con páginas existentes
 async function peticionBackend(endpoint, metodo, datos) {
   return apiClient.request(endpoint, metodo, datos)
+}
+
+function authHeaders() {
+  return apiClient.authHeaders()
+}
+
+function apiUrl(path) {
+  return `/api/${String(path).replace(/^\//, '')}`
 }

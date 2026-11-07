@@ -27,7 +27,7 @@
             <div class="card-box" style="max-width: 600px; margin: 20px auto; padding: 30px;">
                 <h3 style="margin-bottom: 20px;">Buscar Vehículo por Placa</h3>
                 <div style="display: flex; gap: 10px;">
-                    <input type="text" id="inputPlaca" placeholder="Ej: MCX-5585"
+                    <input type="text" id="inputPlaca" placeholder="Ej: MCX5585"
                         style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #ddd;">
                     <button class="btn blue" onclick="buscarVehiculo()"
                         style="height: auto; padding: 0 20px;">Buscar</button>
@@ -38,7 +38,8 @@
                     <p><strong>Placa:</strong> <span id="txtPlaca"></span></p>
                     <p><strong>Tipo:</strong> <span id="txtTipo"></span></p>
                     <p><strong>Hora Entrada:</strong> <span id="txtEntrada"></span></p>
-                    <p style="font-size: 20px; color: #2ecc71; margin-top: 15px;"><strong>Total a Pagar:</strong> $<span
+                    <p><strong>Horas a cobrar:</strong> <span id="txtHoras"></span></p>
+                    <p style="font-size: 20px; color: #2ecc71; margin-top: 15px;"><strong>Total a Pagar:</strong> RD$<span
                             id="txtTotal"></span></p>
                     <button class="btn green" onclick="confirmarSalida()"
                         style="width: 100%; margin-top: 20px;">CONFIRMAR SALIDA Y PAGO</button>
@@ -47,58 +48,42 @@
         </main>
     </div>
 
+    <script src="../js/api.js"></script>
+    <script src="../js/placa.js"></script>
     <script src="../js/toast.js"></script>
     <script>
-        let ticketEncontrado = null;
-        let vehiculoEncontrado = null;
+        let cotizacion = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            if (!localStorage.getItem("token")) {
+                window.location.href = "/login";
+            }
+        });
 
         async function buscarVehiculo() {
-            const placa = document.getElementById("inputPlaca").value.trim().toUpperCase();
-
-            if (!placa) {
-                toast.warning("Ingresa una placa");
+            const check = validarPlacaInput(document.getElementById("inputPlaca").value);
+            if (!check.ok) {
+                toast.warning(check.error);
                 return;
             }
+            const placa = check.placa;
 
             try {
-                const resVehiculos = await fetch("http://localhost:3000/api/vehiculos");
-                const dataVehiculos = await resVehiculos.json();
-
-                vehiculoEncontrado = dataVehiculos.data.find(v => v.placa.toUpperCase() === placa);
-
-                if (!vehiculoEncontrado) {
-                    toast.error("Vehículo no encontrado.");
+                const data = await peticionBackend(`tickets/salida/cotizar?placa=${encodeURIComponent(placa)}`, "GET");
+                if (!data.success) {
+                    toast.error(data.error || "No se encontró ticket abierto");
                     document.getElementById("detalleSalida").style.display = "none";
+                    cotizacion = null;
                     return;
                 }
 
-                const resTickets = await fetch("http://localhost:3000/api/tickets");
-                const dataTickets = await resTickets.json();
-
-                ticketEncontrado = dataTickets.data.find(t =>
-                    t.vehiculo_id === vehiculoEncontrado.id && t.status_de_pago === "pendiente"
-                );
-
-                if (!ticketEncontrado) {
-                    toast.warning("No se encontró ticket pendiente para este vehículo.");
-                    document.getElementById("detalleSalida").style.display = "none";
-                    return;
-                }
-
-                const ahora = new Date();
-                const entrada = new Date(ticketEncontrado.fecha_hora_entrada);
-                const minutos = Math.max(1, Math.round((ahora - entrada) / 60000));
-                const tarifa = vehiculoEncontrado.tipo === "carro" ? 2 : 1;
-                const total = minutos * tarifa;
-
-                document.getElementById("txtPlaca").innerText = vehiculoEncontrado.placa;
-                document.getElementById("txtTipo").innerText = vehiculoEncontrado.tipo;
-                document.getElementById("txtEntrada").innerText = entrada.toLocaleString();
-                document.getElementById("txtTotal").innerText = total.toFixed(2);
+                cotizacion = data.data;
+                document.getElementById("txtPlaca").innerText = cotizacion.placa;
+                document.getElementById("txtTipo").innerText = cotizacion.tipo;
+                document.getElementById("txtEntrada").innerText = new Date(cotizacion.fecha_hora_entrada).toLocaleString();
+                document.getElementById("txtHoras").innerText = cotizacion.horas;
+                document.getElementById("txtTotal").innerText = Number(cotizacion.monto).toFixed(2);
                 document.getElementById("detalleSalida").style.display = "block";
-
-                ticketEncontrado._total = total;
-
             } catch (error) {
                 toast.error("Error conectando con el servidor");
                 console.error(error);
@@ -106,52 +91,20 @@
         }
 
         async function confirmarSalida() {
-            if (!ticketEncontrado) return;
-
-            const ahora = new Date().toISOString().slice(0, 19).replace("T", " ");
-            const usuario_id = parseInt(localStorage.getItem("usuario_id")) || 1;
-            const fechaEntrada = new Date(ticketEncontrado.fecha_hora_entrada)
-                .toISOString().slice(0, 19).replace("T", " ");
+            if (!cotizacion) return;
 
             try {
-                const resTicket = await fetch(`http://localhost:3000/api/tickets/${ticketEncontrado.id}`, {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        vehiculo_id: ticketEncontrado.vehiculo_id,
-                        fecha_hora_entrada: fechaEntrada,
-                        fecha_hora_salida: ahora,
-                        total_pagar: ticketEncontrado._total,
-                        status_de_pago: "pagado"
-                    })
+                const data = await peticionBackend("tickets/salida", "POST", {
+                    ticket_id: cotizacion.ticket_id,
+                    placa: cotizacion.placa
                 });
 
-                const dataTicket = await resTicket.json();
-                if (!dataTicket.success) {
-                    toast.error("Error al actualizar ticket: " + dataTicket.error);
-                    return;
-                }
-
-                const resPago = await fetch("http://localhost:3000/api/pagos", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        usuario_id,
-                        ticket_id: ticketEncontrado.id,
-                        monto: ticketEncontrado._total,
-                        fecha_de_pago: ahora
-                    })
-                });
-
-                const dataPago = await resPago.json();
-
-                if (dataPago.success) {
-                    toast.success("Salida registrada con éxito ✅");
+                if (data.success) {
+                    toast.success(`Salida registrada. Total: RD$${Number(data.total_pagar).toFixed(2)}`);
                     setTimeout(() => window.location.href = "/dashboard", 1500);
                 } else {
-                    toast.error("Error al registrar pago: " + dataPago.error);
+                    toast.error(data.error || "Error al registrar salida");
                 }
-
             } catch (error) {
                 toast.error("Error conectando con el servidor");
                 console.error(error);
