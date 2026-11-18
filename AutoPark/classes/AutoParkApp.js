@@ -86,8 +86,13 @@ class AutoParkApp {
 
   setupErrorHandling() {
     this.app.use((err, req, res, next) => {
-      console.error(err)
-      res.status(500).json({ success: false, error: 'Internal Server Error' })
+      // JSON mal formado u otros errores del cliente: 400, no 500.
+      const status = err.status || err.statusCode
+      if (status >= 400 && status < 500) {
+        return res.status(status).json({ success: false, error: 'Solicitud no válida' })
+      }
+      if (process.env.NODE_ENV !== 'test') console.error(err)
+      res.status(500).json({ success: false, error: 'Error interno del servidor' })
     })
   }
 

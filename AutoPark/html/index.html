@@ -131,6 +131,19 @@
                         <h3>Total Tickets</h3>
                         <p id="totalTickets">0</p>
                     </div>
+                    <div class="card blue nav-auth-only" id="cardPuestos">
+                        <i class="fa fa-parking"></i>
+                        <h3>Puestos Libres</h3>
+                        <p id="puestosLibres">-</p>
+                    </div>
+                </section>
+
+                <!-- M11 · RF-60: avisos del usuario de la sesión -->
+                <section class="table-box nav-auth-only" id="boxNotificaciones">
+                    <h3><i class="fa fa-bell"></i> Mis notificaciones</h3>
+                    <ul id="listaNotificaciones" style="list-style:none;padding:0;margin:0">
+                        <li>Sin notificaciones</li>
+                    </ul>
                 </section>
 
                 <section class="table-box">
@@ -221,7 +234,32 @@
             }
 
             cargarDashboard();
+            if (rol) cargarPuestosYAvisos();
         });
+
+        // M9 (RF-58) y M11 (RF-60)
+        async function cargarPuestosYAvisos() {
+            const [disp, avisos] = await Promise.all([
+                peticionBackend("secciones_parqueo/disponibilidad", "GET"),
+                peticionBackend("notificaciones/mias", "GET")
+            ]);
+            if (disp.success) {
+                const libres = disp.data.reduce((s, e) => s + e.disponibles, 0);
+                const total = disp.data.reduce((s, e) => s + e.total, 0);
+                document.getElementById("puestosLibres").innerText = `${libres} / ${total}`;
+            }
+            if (avisos.success && avisos.data.length) {
+                const lista = document.getElementById("listaNotificaciones");
+                lista.replaceChildren(...avisos.data.slice(0, 8).map((n) => {
+                    const li = document.createElement("li");
+                    li.style.padding = "6px 0";
+                    li.style.borderBottom = "1px solid #eee";
+                    const fecha = new Date(n.created_at).toLocaleString();
+                    li.textContent = `[${n.tipo}] ${n.mensaje} · ${fecha}`;
+                    return li;
+                }));
+            }
+        }
 
         async function cargarDashboard() {
             try {

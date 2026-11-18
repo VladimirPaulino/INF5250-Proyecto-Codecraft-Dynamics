@@ -24,7 +24,7 @@ module.exports = (db) => {
   }))
 
   router.patch('/:id/cancelar', requireAuth, handle(async (req, res) => {
-    await service.cancelar(req.params.id)
+    await service.cancelar(req.params.id, req.user)
     messageResponse(res, 'Reservación cancelada')
   }))
 
@@ -34,7 +34,7 @@ module.exports = (db) => {
   }))
 
   router.delete('/:id', requireAuth, handle(async (req, res) => {
-    await service.cancelar(req.params.id)
+    await service.cancelar(req.params.id, req.user)
     messageResponse(res, 'Reservación cancelada')
   }))
 

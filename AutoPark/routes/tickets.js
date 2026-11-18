@@ -58,8 +58,8 @@ module.exports = (db) => {
   }))
 
   router.delete('/:id', requireAuth, handle(async (req, res) => {
-    await service.delete(req.params.id)
-    messageResponse(res, 'Ticket deleted successfully')
+    await service.anular(req.params.id, req.user)
+    messageResponse(res, 'Ticket anulado')
   }))
 
   return router

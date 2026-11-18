@@ -39,7 +39,7 @@ module.exports = (db) => {
   }))
 
   router.delete('/:id', requireAdmin, handle(async (req, res) => {
-    await service.delete(req.params.id)
+    await service.eliminar(req.params.id, req.user)
     messageResponse(res, 'Usuario deleted successfully')
   }))
 

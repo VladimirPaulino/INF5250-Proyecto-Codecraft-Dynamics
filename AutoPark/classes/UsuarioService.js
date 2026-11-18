@@ -1,7 +1,11 @@
 const bcrypt = require('bcryptjs')
 const BaseService = require('./BaseService')
-const { UnauthorizedError, ValidationError, NotFoundError } = require('./errors')
+const { UnauthorizedError, ValidationError, NotFoundError, ConflictError } = require('./errors')
 const { createSessionToken } = require('./auth')
+const AuditLogService = require('./AuditLogService')
+
+const ROLES = ['admin', 'usuario']
+const ESTADOS = ['activo', 'inactivo']
 
 const SALT_ROUNDS = 10
 const SAFE_COLUMNS = ['id', 'nombre', 'email', 'telefono', 'role', 'estado', 'created_at', 'updated_at']
@@ -35,7 +39,7 @@ class UsuarioService extends BaseService {
       throw new UnauthorizedError('Usuario o contraseña incorrectos')
     }
 
-    let valido = false
+    let valido
     if (pareceHash(usuario.contrasena)) {
       valido = await bcrypt.compare(contrasena, usuario.contrasena)
     } else {
@@ -74,8 +78,12 @@ class UsuarioService extends BaseService {
       if (estado) estadoFinal = estado
     }
 
+    if (!ROLES.includes(roleFinal) || !ESTADOS.includes(estadoFinal)) {
+      throw new ValidationError('Role o estado no válido')
+    }
+
     const hash = await bcrypt.hash(contrasena, SALT_ROUNDS)
-    return this.create({
+    const id = await this.create({
       nombre,
       email,
       telefono,
@@ -83,6 +91,11 @@ class UsuarioService extends BaseService {
       role: roleFinal,
       estado: estadoFinal
     })
+    // M12 · RF-61: la bitácora nunca guarda la contraseña.
+    await AuditLogService.registrar(this.db, actor?.id || id, 'usuario.crear', {
+      usuario_id: id, nombre, email, role: roleFinal, estado: estadoFinal
+    })
+    return id
   }
 
   async updateFromBody(id, body, actor = null) {
@@ -99,8 +112,31 @@ class UsuarioService extends BaseService {
     } else if (role !== undefined || estado !== undefined) {
       throw new ValidationError('No puede cambiar role o estado')
     }
+    if ((data.role !== undefined && !ROLES.includes(data.role)) ||
+        (data.estado !== undefined && !ESTADOS.includes(data.estado))) {
+      throw new ValidationError('Role o estado no válido')
+    }
 
-    return this.update(id, data)
+    const updated = await this.update(id, data)
+    const cambios = Object.keys(data).filter((k) => data[k] !== undefined)
+      .map((k) => (k === 'contrasena' ? 'contrasena(cambiada)' : k))
+    await AuditLogService.registrar(this.db, actor?.id || id, 'usuario.editar', {
+      usuario_id: Number(id), campos: cambios
+    })
+    return updated
+  }
+
+  /** RF-51: no se puede eliminar la cuenta de la sesión abierta. */
+  async eliminar(id, actor = null) {
+    if (actor && String(actor.id) === String(id)) {
+      throw new ConflictError('No puede eliminar su propia cuenta mientras tiene la sesión abierta')
+    }
+    const usuario = await this.findById(id)
+    await this.delete(id)
+    await AuditLogService.registrar(this.db, actor?.id, 'usuario.eliminar', {
+      usuario_id: usuario.id, nombre: usuario.nombre, email: usuario.email
+    })
+    return 1
   }
 }
 
