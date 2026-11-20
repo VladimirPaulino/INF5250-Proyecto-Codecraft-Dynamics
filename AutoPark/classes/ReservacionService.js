@@ -1,6 +1,6 @@
 const BaseService = require('./BaseService')
 const TicketService = require('./TicketService')
-const { ConflictError, NotFoundError, ValidationError } = require('./errors')
+const { ConflictError, ForbiddenError, NotFoundError, ValidationError } = require('./errors')
 const { aDatetime, parsearFecha } = require('./dateUtils')
 const { validarPlaca } = require('./placaUtils')
 const NotificacionService = require('./NotificacionService')
@@ -160,6 +160,10 @@ class ReservacionService extends BaseService {
   async cancelar(id, actor = null) {
     return this.db.transaction(async (trx) => {
       const reserva = await this.obtenerConfirmada(trx, id)
+      // Solo quien creó la reserva o un administrador puede cancelarla (revisión QA PR #17).
+      if (actor && actor.role !== 'admin' && String(actor.id) !== String(reserva.usuario_id)) {
+        throw new ForbiddenError('Solo quien creó la reservación o un administrador puede cancelarla')
+      }
       await trx('reservaciones').where('id', id).update({ estado: 'cancelada' })
       await AuditLogService.registrar(trx, actor?.id || reserva.usuario_id, 'reserva.cancelar', {
         reservacion_id: reserva.id, placa: reserva.placa

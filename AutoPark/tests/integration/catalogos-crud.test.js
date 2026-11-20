@@ -45,7 +45,7 @@ describe('Espacios disponibles y cambios de puesto', () => {
     const cambio = { usuario_id: ctx.operador.id, espacio_id: ctx.espacioId, fecha_de_entrada: '2026-11-18 10:00:00' }
     const c = await request(app).post('/api/cambios_puestos').set(adm()).send(cambio)
     expect(c.status).toBe(201)
-    expect((await request(app).get('/api/cambios_puestos').set(op())).body.count).toBe(1)
+    expect((await request(app).get('/api/cambios_puestos').set(adm())).body.count).toBe(1)
     expect((await request(app).get(`/api/cambios_puestos/usuario/${ctx.operador.id}`).set(op())).body.count).toBe(1)
     expect((await request(app).get(`/api/cambios_puestos/${c.body.id}`).set(op())).status).toBe(200)
     expect((await request(app).put(`/api/cambios_puestos/${c.body.id}`).set(adm()).send({ ...cambio, fecha_de_salida: '2026-11-18 11:00:00' })).status).toBe(200)

@@ -7,19 +7,26 @@ module.exports = (db) => {
   const router = express.Router()
   const service = new CambioPuestoService(db)
 
-  router.get('/', requireAuth, handle(async (req, res) => {
+  const esDuenoOAdmin = (req, usuarioId) =>
+    req.user.role === 'admin' || String(req.user.id) === String(usuarioId)
+  const prohibido = (res) => res.status(403).json({ success: false, error: 'No autorizado' })
+
+  // Historial completo de cambios de puesto: solo administrador (revisión QA PR #17).
+  router.get('/', requireAdmin, handle(async (req, res) => {
     const data = await service.findAll()
     listResponse(res, data)
   }))
 
   // Specific path must be registered before /:id
   router.get('/usuario/:usuario_id', requireAuth, handle(async (req, res) => {
+    if (!esDuenoOAdmin(req, req.params.usuario_id)) return prohibido(res)
     const data = await service.findByUsuarioId(req.params.usuario_id)
     listResponse(res, data)
   }))
 
   router.get('/:id', requireAuth, handle(async (req, res) => {
     const data = await service.findById(req.params.id)
+    if (!esDuenoOAdmin(req, data.usuario_id)) return prohibido(res)
     itemResponse(res, data)
   }))
 

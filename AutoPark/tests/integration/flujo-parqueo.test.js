@@ -163,7 +163,7 @@ describe('Salida y cobro (RF-26 a RF-30, RF-59 a RF-61)', () => {
 describe('Anular ticket (RF-59, RF-61)', () => {
   test('anular un ticket abierto libera el puesto y queda en la bitácora', async () => {
     const e = await entrada('A111111')
-    const res = await request(app).delete(`/api/tickets/${e.body.ticket_id}`).set(op())
+    const res = await request(app).delete(`/api/tickets/${e.body.ticket_id}`).set(adm())
     expect(res.status).toBe(200)
     const seccion = await db('secciones_parqueo').where('id', e.body.seccion_id).first()
     expect(seccion.estado).toBe('disponible')
@@ -173,8 +173,8 @@ describe('Anular ticket (RF-59, RF-61)', () => {
   test('no se puede anular un ticket pagado (409) ni uno inexistente (404)', async () => {
     const e = await entrada('A111111')
     await request(app).post('/api/tickets/salida').set(op()).send({ placa: 'A111111' })
-    expect((await request(app).delete(`/api/tickets/${e.body.ticket_id}`).set(op())).status).toBe(409)
-    expect((await request(app).delete('/api/tickets/9999').set(op())).status).toBe(404)
+    expect((await request(app).delete(`/api/tickets/${e.body.ticket_id}`).set(adm())).status).toBe(409)
+    expect((await request(app).delete('/api/tickets/9999').set(adm())).status).toBe(404)
   })
 })
 
@@ -207,7 +207,7 @@ describe('Tickets: lectura y compatibilidad', () => {
 
   test('PUT /api/tickets/:id actualiza y 404 si no existe', async () => {
     const e = await entrada('A111111')
-    expect((await request(app).put(`/api/tickets/${e.body.ticket_id}`).set(op()).send({ total_pagar: 5 })).status).toBe(200)
-    expect((await request(app).put('/api/tickets/9999').set(op()).send({ total_pagar: 5 })).status).toBe(404)
+    expect((await request(app).put(`/api/tickets/${e.body.ticket_id}`).set(adm()).send({ total_pagar: 5 })).status).toBe(200)
+    expect((await request(app).put('/api/tickets/9999').set(adm()).send({ total_pagar: 5 })).status).toBe(404)
   })
 })
