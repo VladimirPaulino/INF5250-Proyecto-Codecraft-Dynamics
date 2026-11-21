@@ -1,7 +1,7 @@
 const express = require('express')
 const TicketService = require('../classes/TicketService')
 const { handle, listResponse, itemResponse, createdResponse, messageResponse } = require('../classes/routeHelpers')
-const { requireAuth, optionalAuth } = require('../classes/auth')
+const { requireAuth, requireAdmin, optionalAuth } = require('../classes/auth')
 
 module.exports = (db) => {
   const router = express.Router()
@@ -52,14 +52,15 @@ module.exports = (db) => {
     createdResponse(res, 'Ticket created successfully', id)
   }))
 
-  router.put('/:id', requireAuth, handle(async (req, res) => {
+  // Editar o anular un ticket cambia el cobro: solo el administrador (revisión QA PR #17).
+  router.put('/:id', requireAdmin, handle(async (req, res) => {
     await service.updateFromBody(req.params.id, req.body)
     messageResponse(res, 'Ticket updated successfully')
   }))
 
-  router.delete('/:id', requireAuth, handle(async (req, res) => {
-    await service.delete(req.params.id)
-    messageResponse(res, 'Ticket deleted successfully')
+  router.delete('/:id', requireAdmin, handle(async (req, res) => {
+    await service.anular(req.params.id, req.user)
+    messageResponse(res, 'Ticket anulado')
   }))
 
   return router

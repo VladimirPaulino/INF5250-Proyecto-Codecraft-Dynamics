@@ -3,7 +3,7 @@ const globals = require('globals')
 
 module.exports = [
   {
-    ignores: ['node_modules/**']
+    ignores: ['node_modules/**', 'coverage/**']
   },
   js.configs.recommended,
   {
@@ -29,6 +29,13 @@ module.exports = [
     },
     rules: {
       'no-unused-vars': ['error', { vars: 'local' }]
+    }
+  },
+  {
+    // Pruebas con Jest (E4-A4)
+    files: ['tests/**/*.js'],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.jest }
     }
   }
 ]

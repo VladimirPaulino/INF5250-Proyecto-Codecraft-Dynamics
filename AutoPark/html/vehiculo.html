@@ -146,8 +146,8 @@
                         return;
                     }
 
-                    const { horas, monto } = cotizacion.data;
-                    if (!confirm(`Resumen de Salida:\nHoras: ${horas}\nTotal a pagar: RD$ ${monto}\n\n¿Confirmar salida?`)) {
+                    const { minutos, detalle, monto } = cotizacion.data;
+                    if (!confirm(`Resumen de Salida:\nTiempo: ${minutos} min (${detalle})\nTotal a pagar: RD$ ${monto}\n\n¿Confirmar salida?`)) {
                         return;
                     }
 

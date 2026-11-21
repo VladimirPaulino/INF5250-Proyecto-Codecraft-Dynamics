@@ -19,7 +19,7 @@ module.exports = (db) => {
 
   // Los pagos de salida se crean vía POST /api/tickets/salida
   router.post('/', requireAdmin, handle(async (req, res) => {
-    const id = await service.createFromBody(req.body)
+    const id = await service.createFromBody(req.body, req.user)
     createdResponse(res, 'Pago created successfully', id)
   }))
 

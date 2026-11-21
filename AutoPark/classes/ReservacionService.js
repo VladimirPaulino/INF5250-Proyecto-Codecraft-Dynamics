@@ -1,8 +1,10 @@
 const BaseService = require('./BaseService')
 const TicketService = require('./TicketService')
-const { ConflictError, NotFoundError, ValidationError } = require('./errors')
+const { ConflictError, ForbiddenError, NotFoundError, ValidationError } = require('./errors')
 const { aDatetime, parsearFecha } = require('./dateUtils')
 const { validarPlaca } = require('./placaUtils')
+const NotificacionService = require('./NotificacionService')
+const AuditLogService = require('./AuditLogService')
 
 const DURACIONES = [1, 2, 4, 8]
 const TIPOS = ['carro', 'motocicleta']
@@ -88,6 +90,15 @@ class ReservacionService extends BaseService {
         fecha_de_salida: aDatetime(fin),
         estado: 'confirmada'
       })
+
+      // M11 · RF-60 y M12 · RF-61
+      await NotificacionService.notificar(
+        trx, body.usuario_id,
+        `Reserva #${id} confirmada para ${placa} el ${aDatetime(inicio)} (${duracion} h)`
+      )
+      await AuditLogService.registrar(trx, body.usuario_id, 'reserva.confirmar', {
+        reservacion_id: id, cliente, placa, inicio: aDatetime(inicio), duracion_horas: duracion
+      })
       return id
     })
   }
@@ -146,10 +157,17 @@ class ReservacionService extends BaseService {
   }
 
   /** RF-40: cancelar libera el cupo porque deja de contar como confirmada. */
-  async cancelar(id) {
+  async cancelar(id, actor = null) {
     return this.db.transaction(async (trx) => {
-      await this.obtenerConfirmada(trx, id)
+      const reserva = await this.obtenerConfirmada(trx, id)
+      // Solo quien creó la reserva o un administrador puede cancelarla (revisión QA PR #17).
+      if (actor && actor.role !== 'admin' && String(actor.id) !== String(reserva.usuario_id)) {
+        throw new ForbiddenError('Solo quien creó la reservación o un administrador puede cancelarla')
+      }
       await trx('reservaciones').where('id', id).update({ estado: 'cancelada' })
+      await AuditLogService.registrar(trx, actor?.id || reserva.usuario_id, 'reserva.cancelar', {
+        reservacion_id: reserva.id, placa: reserva.placa
+      })
     })
   }
 

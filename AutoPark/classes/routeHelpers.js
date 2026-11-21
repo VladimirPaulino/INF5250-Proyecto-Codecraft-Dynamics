@@ -3,7 +3,14 @@ function handle(fn) {
     try {
       await fn(req, res)
     } catch (err) {
+      // RNF-03: los errores controlados (4xx) muestran su mensaje; los demás
+      // se registran en el servidor y el navegador recibe un texto genérico,
+      // sin SQL, rutas internas ni datos sensibles.
       const status = err.statusCode || 500
+      if (status >= 500) {
+        if (process.env.NODE_ENV !== 'test') console.error(err)
+        return res.status(500).json({ success: false, error: 'Error interno del servidor' })
+      }
       res.status(status).json({ success: false, error: err.message })
     }
   }

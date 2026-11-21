@@ -227,6 +227,19 @@ npm run migrate:rollback    # Revertir último lote de migraciones
 npm run migrate:status      # Listar estado de migraciones
 ```
 
+#### Pruebas (E4-A4)
+
+Las pruebas de integración usan una base de datos aparte, `autopark_test`, que se crea y migra sola.
+Usa las mismas variables `DB_HOST`, `DB_PORT`, `DB_USER` y `DB_PASSWORD` que la aplicación
+(`DB_TEST_NAME` cambia el nombre de la base de prueba). Nunca toca `sistema_parqueos`.
+
+```bash
+npm test                    # Todas las pruebas (unitarias + integración)
+npm run test:unit           # Solo unitarias (no necesitan base de datos)
+npm run test:integration    # Solo integración (Supertest + MariaDB)
+npm run test:coverage       # Pruebas + reporte de cobertura en coverage/index.html
+```
+
 ### Endpoints de la API
 
 La API proporciona endpoints RESTful para las 12 tablas. Cada endpoint soporta solicitudes GET y POST.

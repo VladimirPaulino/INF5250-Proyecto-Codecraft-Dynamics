@@ -38,7 +38,7 @@
                     <p><strong>Placa:</strong> <span id="txtPlaca"></span></p>
                     <p><strong>Tipo:</strong> <span id="txtTipo"></span></p>
                     <p><strong>Hora Entrada:</strong> <span id="txtEntrada"></span></p>
-                    <p><strong>Horas a cobrar:</strong> <span id="txtHoras"></span></p>
+                    <p><strong>Tiempo cobrado:</strong> <span id="txtHoras"></span></p>
                     <p style="font-size: 20px; color: #2ecc71; margin-top: 15px;"><strong>Total a Pagar:</strong> RD$<span
                             id="txtTotal"></span></p>
                     <button class="btn green" onclick="confirmarSalida()"
@@ -81,7 +81,7 @@
                 document.getElementById("txtPlaca").innerText = cotizacion.placa;
                 document.getElementById("txtTipo").innerText = cotizacion.tipo;
                 document.getElementById("txtEntrada").innerText = new Date(cotizacion.fecha_hora_entrada).toLocaleString();
-                document.getElementById("txtHoras").innerText = cotizacion.horas;
+                document.getElementById("txtHoras").innerText = `${cotizacion.minutos} min (${cotizacion.detalle})`;
                 document.getElementById("txtTotal").innerText = Number(cotizacion.monto).toFixed(2);
                 document.getElementById("detalleSalida").style.display = "block";
             } catch (error) {
